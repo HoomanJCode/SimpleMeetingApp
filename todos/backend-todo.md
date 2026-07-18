@@ -36,29 +36,29 @@
 
 ## 3. Database Layer
 
-- [ ] Create `src/db/connection.ts`
-  - [ ] better-sqlite3 singleton
-  - [ ] WAL mode enabled
-  - [ ] Foreign keys enabled
-- [ ] Create migration system
-  - [ ] Migration runner class
-  - [ ] Reads `src/db/migrations/*.sql` files
-  - [ ] Tracks executed migrations in `_migrations` table
-- [ ] Write migration `001_create_users.sql`
-- [ ] Write migration `002_create_meetings.sql`
-- [ ] Write migration `003_create_participants.sql`
-- [ ] Write migration `004_create_refresh_tokens.sql`
-- [ ] Create `src/db/seed.ts` — dev seed data
+- [x] Create `src/db/connection.ts`
+  - [x] better-sqlite3 singleton
+  - [x] WAL mode enabled
+  - [x] Foreign keys enabled
+- [x] Create migration system
+  - [x] Migration runner class
+  - [x] Reads `src/db/migrations/*.sql` files
+  - [x] Tracks executed migrations in `_migrations` table
+- [x] Write migration `001_create_users.sql`
+- [x] Write migration `002_create_meetings.sql`
+- [x] Write migration `003_create_participants.sql`
+- [x] Write migration `004_create_refresh_tokens.sql`
+- [x] Create `src/db/seed.ts` — dev seed data
 
 ## 4. Type Definitions
 
-- [ ] Create `src/types/models.ts`
-  - [ ] `User` interface
-  - [ ] `Meeting` interface
-  - [ ] `Participant` interface
-  - [ ] `RefreshToken` interface
-- [ ] Create `src/types/express.d.ts`
-  - [ ] Augment Express Request with `user` property
+- [x] Create `src/types/models.ts`
+  - [x] `User` interface
+  - [x] `Meeting` interface
+  - [x] `Participant` interface
+  - [x] `RefreshToken` interface
+- [x] Create `src/types/express.d.ts`
+  - [x] Augment Express Request with `user` property
 - [x] Create `src/utils/errors.ts`
   - [x] `AppError` base class
   - [x] `NotFoundError`
