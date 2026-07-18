@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ValidationError } from '../utils/errors';
 
-type ValidationTarget = 'body' | 'query' | 'params';
-
 interface ValidateOptions {
   body?: ZodSchema;
   query?: ZodSchema;
@@ -29,17 +27,20 @@ export function validate(options: ValidateOptions) {
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        const details = err.errors.reduce(
-          (acc, e) => {
-            const path = e.path.join('.');
-            acc[path] = e.message;
+        // Zod v4 uses .issues instead of .errors
+        const issues = (err as any).issues || (err as any).errors || [];
+        const details = issues.reduce(
+          (acc: Record<string, string>, e: any) => {
+            const path = Array.isArray(e.path) ? e.path.join('.') : String(e.path || '');
+            acc[path || '_root'] = e.message;
             return acc;
           },
           {} as Record<string, string>
         );
-        throw new ValidationError(details);
+        next(new ValidationError(details));
+        return;
       }
-      throw err;
+      next(err);
     }
   };
 }

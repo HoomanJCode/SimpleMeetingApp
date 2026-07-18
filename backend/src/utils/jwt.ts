@@ -8,8 +8,9 @@ import { JwtPayload } from '../types/models';
  */
 export function generateAccessToken(payload: JwtPayload): string {
   const env = getEnv();
-  return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRATION,
+  // Cast options to work with newer @types/jsonwebtoken
+  return jwt.sign(payload as object, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRATION as any,
   });
 }
 
@@ -28,8 +29,15 @@ export function verifyAccessToken(token: string): JwtPayload | null {
 
 /**
  * Generates a cryptographically random refresh token.
- * Returns a 64-byte hex string (128 characters).
+ * Returns the raw token (64-byte hex string, 128 characters).
  */
 export function generateRefreshToken(): string {
   return crypto.randomBytes(64).toString('hex');
+}
+
+/**
+ * Hashes a refresh token for secure storage.
+ */
+export function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }

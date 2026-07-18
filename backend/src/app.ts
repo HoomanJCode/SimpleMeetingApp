@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { getEnv } from './config/env';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { generalLimiter } from './middleware/rateLimiter';
 import routes from './routes';
 
 export function createApp() {
@@ -29,18 +29,6 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
 
   // Rate limiting
-  const generalLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 100,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: {
-        code: 'RATE_LIMITED',
-        message: 'Too many requests, please try again later.',
-      },
-    },
-  });
   app.use(generalLimiter);
 
   // Request logging
