@@ -1,12 +1,37 @@
-### Windows
-# Windows thumbnail cache files
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files (contains secrets)
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
 Thumbs.db
 
-# Folder config file
-[Dd]esktop.ini
+# Logs
+*.log
+logs/
 
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
+# Test coverage
+coverage/
 
-# Windows shortcuts
-*.lnk
+# Playwright
+test-results/
+playwright-report/
+
+# Temp
+tmp/
