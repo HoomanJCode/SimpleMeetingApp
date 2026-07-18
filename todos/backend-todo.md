@@ -2,37 +2,37 @@
 
 ## 1. Project Setup
 
-- [ ] Initialize npm project (`npm init -y`)
-- [ ] Install dependencies:
+- [x] Initialize npm project (`npm init -y`)
+- [x] Install dependencies:
   - `express`, `better-sqlite3`, `socket.io`
   - `jsonwebtoken`, `zod`, `cors`, `helmet`
   - `express-rate-limit`, `pino`, `google-auth-library`
-- [ ] Install dev dependencies:
+- [x] Install dev dependencies:
   - `typescript`, `@types/*` packages
   - `vitest`, `supertest`, `tsx`, `nodemon`
-- [ ] Create `tsconfig.json` (strict mode, paths)
-- [ ] Create `.env.example`
-- [ ] Create `vitest.config.ts`
-- [ ] Add scripts: `dev`, `build`, `start`, `test`, `lint`
+- [x] Create `tsconfig.json` (strict mode, paths)
+- [x] Create `.env.example`
+- [x] Create `vitest.config.ts`
+- [x] Add scripts: `dev`, `build`, `start`, `test`, `lint`
 
 ## 2. Core Server Setup
 
-- [ ] Create `src/index.ts` — server entry point
-  - [ ] Import and validate env vars
-  - [ ] Create HTTP server
-  - [ ] Initialize WebSocket server
-  - [ ] Start listening on configured port
-  - [ ] Handle graceful shutdown (SIGTERM/SIGINT)
-- [ ] Create `src/app.ts` — Express app
-  - [ ] Configure Helmet
-  - [ ] Configure CORS
-  - [ ] Configure JSON body parser
-  - [ ] Configure rate limiter
-  - [ ] Mount route handlers
-  - [ ] Configure 404 handler
-  - [ ] Configure global error handler
-- [ ] Create `src/config/env.ts` — Zod env validation
-- [ ] Create `src/utils/logger.ts` — Pino logger
+- [x] Create `src/index.ts` — server entry point
+  - [x] Import and validate env vars
+  - [x] Create HTTP server
+  - [ ] Initialize WebSocket server (deferred to Section 7)
+  - [x] Start listening on configured port
+  - [x] Handle graceful shutdown (SIGTERM/SIGINT)
+- [x] Create `src/app.ts` — Express app
+  - [x] Configure Helmet
+  - [x] Configure CORS
+  - [x] Configure JSON body parser
+  - [x] Configure rate limiter
+  - [x] Mount route handlers
+  - [x] Configure 404 handler
+  - [x] Configure global error handler
+- [x] Create `src/config/env.ts` — Zod env validation
+- [x] Create `src/utils/logger.ts` — Pino logger
 
 ## 3. Database Layer
 
@@ -59,13 +59,13 @@
   - [ ] `RefreshToken` interface
 - [ ] Create `src/types/express.d.ts`
   - [ ] Augment Express Request with `user` property
-- [ ] Create `src/utils/errors.ts`
-  - [ ] `AppError` base class
-  - [ ] `NotFoundError`
-  - [ ] `UnauthorizedError`
-  - [ ] `ForbiddenError`
-  - [ ] `ConflictError`
-  - [ ] `ValidationError`
+- [x] Create `src/utils/errors.ts`
+  - [x] `AppError` base class
+  - [x] `NotFoundError`
+  - [x] `UnauthorizedError`
+  - [x] `ForbiddenError`
+  - [x] `ConflictError`
+  - [x] `ValidationError`
 
 ## 5. Authentication
 
@@ -151,16 +151,16 @@
 
 ## 8. Middleware & Error Handling
 
-- [ ] Create `src/middleware/errorHandler.ts`
-  - [ ] Catch `AppError` subclasses
-  - [ ] Return structured error JSON
-  - [ ] Log unexpected errors
-  - [ ] Hide stack traces in production
-- [ ] Create `src/routes/health.routes.ts`
-  - [ ] `GET /health`
-- [ ] Create `src/routes/index.ts`
-  - [ ] Aggregate all route files
-  - [ ] Apply prefixes
+- [x] Create `src/middleware/errorHandler.ts`
+  - [x] Catch `AppError` subclasses
+  - [x] Return structured error JSON
+  - [x] Log unexpected errors
+  - [x] Hide stack traces in production
+- [x] Create `src/routes/health.routes.ts`
+  - [x] `GET /health`
+- [x] Create `src/routes/index.ts`
+  - [x] Aggregate all route files
+  - [x] Apply prefixes
 
 ## 9. Testing
 
