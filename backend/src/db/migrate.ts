@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { getDb } from './connection';
 import { logger } from '../utils/logger';
 
@@ -11,9 +13,6 @@ interface MigrationFile {
  * Files are sorted alphabetically (001_, 002_, etc.).
  */
 function loadMigrationFiles(): MigrationFile[] {
-  const fs = require('fs');
-  const path = require('path');
-
   const migrationsDir = path.resolve(__dirname, 'migrations');
 
   if (!fs.existsSync(migrationsDir)) {

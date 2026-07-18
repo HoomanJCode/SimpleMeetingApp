@@ -6,11 +6,17 @@ import http from 'http';
 import { loadEnv } from './config/env';
 import { createApp } from './app';
 import { logger } from './utils/logger';
+import { getDb, closeDb } from './db/connection';
+import { runMigrations } from './db/migrate';
 
 async function main() {
   // Load and validate environment variables
   const env = loadEnv();
   logger.info({ env: env.NODE_ENV }, 'Starting IrMeetingApp backend');
+
+  // Ensure database is initialized and migrations are run
+  getDb();
+  runMigrations();
 
   // Create Express app
   const app = createApp();
@@ -29,10 +35,10 @@ async function main() {
     server.close((err) => {
       if (err) {
         logger.error({ err }, 'Error during server shutdown');
-        process.exit(1);
       }
+      closeDb();
       logger.info('Server closed gracefully');
-      process.exit(0);
+      process.exit(err ? 1 : 0);
     });
 
     // Force shutdown after 10 seconds
