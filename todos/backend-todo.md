@@ -69,37 +69,38 @@
 
 ## 5. Authentication
 
-- [ ] Create `src/utils/jwt.ts`
-  - [ ] `generateAccessToken(user)` → JWT string
-  - [ ] `verifyAccessToken(token)` → user payload
-  - [ ] `generateRefreshToken()` → random hex string
-- [ ] Create `src/services/authService.ts`
-  - [ ] `getGoogleAuthUrl()` — generates Google OAuth URL
-  - [ ] `handleGoogleCallback(code)` — exchanges code, returns tokens
-  - [ ] `createOrUpdateUser(googleProfile)` — upserts user
-  - [ ] `generateTokens(user)` — creates access + refresh tokens
-  - [ ] `refreshAccessToken(refreshToken)` — validates and rotates
-  - [ ] `revokeRefreshToken(token)` — deletes from DB
-- [ ] Create `src/middleware/authenticate.ts`
-  - [ ] Extract Bearer token from Authorization header
-  - [ ] Verify JWT
-  - [ ] Attach user to `req.user`
-  - [ ] Return 401 on failure
-- [ ] Create `src/middleware/optionalAuth.ts`
-  - [ ] Same as authenticate but doesn't fail
-  - [ ] Sets `req.user = null` if no/invalid token
-- [ ] Create `src/middleware/validate.ts`
-  - [ ] Factory function: `validate(schema: ZodSchema)`
-  - [ ] Validates `req.body`, `req.query`, `req.params`
-  - [ ] Returns 400 with structured errors
-- [ ] Create `src/middleware/rateLimiter.ts`
-  - [ ] General API limiter (100 req/min)
-  - [ ] Auth endpoint limiter (10 req/min)
-- [ ] Create `src/routes/auth.routes.ts`
-  - [ ] `GET /auth/google`
-  - [ ] `GET /auth/google/callback`
-  - [ ] `POST /auth/refresh`
-  - [ ] `GET /auth/me` (protected)
+- [x] Create `src/utils/jwt.ts`
+  - [x] `generateAccessToken(user)` → JWT string
+  - [x] `verifyAccessToken(token)` → user payload
+  - [x] `generateRefreshToken()` → random hex string
+  - [x] `hashToken(token)` → SHA-256 hash for storage
+- [x] Create `src/services/authService.ts`
+  - [x] `getGoogleAuthUrl()` — generates Google OAuth URL
+  - [x] `handleGoogleCallback(code)` — exchanges code, returns tokens
+  - [x] `createOrUpdateUser(googleProfile)` — upserts user
+  - [x] `generateTokens(user)` — creates access + refresh tokens
+  - [x] `refreshAccessToken(refreshToken)` — validates and rotates
+  - [x] `revokeRefreshToken(token)` — deletes from DB
+- [x] Create `src/middleware/authenticate.ts`
+  - [x] Extract Bearer token from Authorization header
+  - [x] Verify JWT
+  - [x] Attach user to `req.user`
+  - [x] Return 401 on failure
+- [x] Create `src/middleware/optionalAuth.ts`
+  - [x] Same as authenticate but doesn't fail
+  - [x] Sets `req.user = null` if no/invalid token
+- [x] Create `src/middleware/validate.ts`
+  - [x] Factory function: `validate(schema: ZodSchema)`
+  - [x] Validates `req.body`, `req.query`, `req.params`
+  - [x] Returns 400 with structured errors
+- [x] Create `src/middleware/rateLimiter.ts`
+  - [x] General API limiter (100 req/min)
+  - [x] Auth endpoint limiter (10 req/min)
+- [x] Create `src/routes/auth.routes.ts`
+  - [x] `GET /auth/google`
+  - [x] `GET /auth/google/callback`
+  - [x] `POST /auth/refresh`
+  - [x] `GET /auth/me` (protected)
 
 ## 6. Meeting CRUD
 
