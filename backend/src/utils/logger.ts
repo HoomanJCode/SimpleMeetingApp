@@ -3,23 +3,16 @@ import { getEnv } from '../config/env';
 
 const env = getEnv();
 
+const isProduction = env.NODE_ENV === 'production';
+const isTest = env.NODE_ENV === 'test';
+
 export const logger = pino({
-  level: env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: isTest ? 'silent' : isProduction ? 'info' : 'debug',
   transport:
-    env.NODE_ENV !== 'production'
+    !isProduction && !isTest
       ? {
           target: 'pino/file',
           options: { destination: 1 }, // stdout
         }
       : undefined,
-  ...(env.NODE_ENV === 'development' && {
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-      },
-    },
-  }),
 });

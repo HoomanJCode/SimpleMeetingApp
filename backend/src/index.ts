@@ -1,3 +1,7 @@
+// Load .env file before any other imports that read environment variables
+import { config } from 'dotenv';
+config({ path: __dirname + '/../.env' });
+
 import http from 'http';
 import { loadEnv } from './config/env';
 import { createApp } from './app';
