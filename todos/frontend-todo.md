@@ -191,19 +191,19 @@
 
 ## 11. Polish & Edge Cases
 
-- [ ] Responsive design for all pages (mobile-first)
-- [ ] Dark mode (using Tailwind dark: classes + system preference)
-- [ ] Skeleton loading states
-- [ ] Empty states with illustrations and CTAs
-- [ ] Error boundaries for critical sections
-- [ ] 404 page with "Back to Home" link
-- [ ] Form dirty state warnings (prevent accidental navigation)
-- [ ] Toast notifications for all mutations
-- [ ] Confirmation modals for delete, leave
-- [ ] Keyboard accessibility (tab navigation, Enter to submit)
-- [ ] Focus management after navigation
-- [ ] SEO basics (title tags, meta descriptions per page)
-- [ ] Performance: code splitting with React.lazy per page
+- [x] Responsive design for all pages (mobile-first)
+- [x] Dark mode (using Tailwind dark: classes + system preference)
+- [x] Skeleton loading states
+- [x] Empty states with illustrations and CTAs
+- [x] Error boundaries for critical sections
+- [x] 404 page with "Back to Home" link
+- [x] Form dirty state warnings (prevent accidental navigation)
+- [x] Toast notifications for all mutations
+- [x] Confirmation modals for delete, leave
+- [x] Keyboard accessibility (tab navigation, Enter to submit)
+- [x] Focus management after navigation
+- [x] SEO basics (title tags, meta descriptions per page)
+- [x] Performance: code splitting with React.lazy per page
 
 ## 12. Testing
 
