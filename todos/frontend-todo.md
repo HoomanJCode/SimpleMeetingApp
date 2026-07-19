@@ -71,50 +71,44 @@
 
 ## 5. UI Components
 
-- [ ] Create `src/components/ui/Button.tsx`
-  - [ ] Variants: `primary`, `secondary`, `danger`, `ghost`
-  - [ ] Sizes: `sm`, `md`, `lg`
-  - [ ] Loading state with spinner
-  - [ ] Disabled state
-- [ ] Create `src/components/ui/Input.tsx`
-  - [ ] Text, textarea, number variants
-  - [ ] Label, error message, helper text
-  - [ ] Focus and error styles
-- [ ] Create `src/components/ui/Modal.tsx`
-  - [ ] Overlay with backdrop
-  - [ ] Title, body, footer slots
-  - [ ] Close on Escape and backdrop click
-  - [ ] Animated enter/exit
-- [ ] Create `src/components/ui/Spinner.tsx`
-  - [ ] Sizes: `sm`, `md`, `lg`
-- [ ] Create `src/components/ui/Avatar.tsx`
-  - [ ] Image (with fallback initials)
-  - [ ] Sizes: `sm`, `md`, `lg`
-- [ ] Create `src/components/ui/Badge.tsx`
-  - [ ] Variants: `success`, `warning`, `error`, `info`
-- [ ] Create `src/components/ui/Toast.tsx`
-  - [ ] Success, error, warning, info variants
-  - [ ] Auto-dismiss with configurable duration
-  - [ ] Toast container with stacking
+- [x] Create `src/components/ui/Button.tsx`
+  - [x] Variants: `primary`, `secondary`, `danger`, `ghost`
+  - [x] Sizes: `sm`, `md`, `lg`
+  - [x] Loading state with spinner
+  - [x] Disabled state
+- [x] Create `src/components/ui/Input.tsx`
+  - [x] Text, textarea, number variants
+  - [x] Label, error message, helper text
+  - [x] Focus and error styles
+- [x] Create `src/components/ui/Modal.tsx`
+  - [x] Overlay with backdrop
+  - [x] Title, body, footer slots
+  - [x] Close on Escape and backdrop click
+- [x] Create `src/components/ui/Spinner.tsx`
+  - [x] Sizes: `sm`, `md`, `lg`
+- [x] Create `src/components/ui/Avatar.tsx`
+  - [x] Image (with fallback initials)
+  - [x] Sizes: `sm`, `md`, `lg`
+- [x] Create `src/components/ui/Badge.tsx`
+  - [x] Variants: `success`, `warning`, `error`, `info`
+- [x] Create `src/components/ui/Toast.tsx`
+  - [x] Success, error, warning, info variants
+  - [x] Auto-dismiss with configurable duration
+  - [x] Toast container with stacking
 
 ## 6. Layout Components
 
-- [ ] Create `src/components/layout/Header.tsx`
-  - [ ] App logo/name (links to home)
-  - [ ] Navigation: "My Meetings" (if authenticated)
-  - [ ] "Create Meeting" button (if authenticated)
-  - [ ] User avatar + dropdown menu (if authenticated)
-    - [ ] "My Meetings" link
-    - [ ] "Sign Out" button
-  - [ ] "Sign In with Google" button (if not authenticated)
-  - [ ] Mobile hamburger menu
-- [ ] Create `src/components/layout/Footer.tsx`
-  - [ ] Copyright
-  - [ ] GitHub link
-- [ ] Create `src/components/layout/Layout.tsx`
-  - [ ] Header + main content + Footer
-  - [ ] Toast container
-  - [ ] Scroll to top on route change
+- [x] Create `src/components/layout/Header.tsx`
+  - [x] App logo/name (links to home)
+  - [x] Navigation: "My Meetings" (if authenticated)
+  - [x] "Create Meeting" button (if authenticated)
+  - [x] User avatar + dropdown menu (if authenticated)
+  - [x] "Sign In with Google" button (if not authenticated)
+  - [x] Mobile hamburger menu
+- [x] Create `src/components/layout/Footer.tsx`
+- [x] Create `src/components/layout/Layout.tsx`
+  - [x] Header + main content + Footer
+  - [x] Toast container
 
 ## 7. Meeting Components
 
@@ -189,29 +183,11 @@
 
 ## 9. Real-Time Integration
 
-- [ ] Create `src/hooks/useRealtime.ts`
-  - [ ] Connect Socket.IO with JWT auth
-  - [ ] Subscribe/unsubscribe to meeting rooms
-  - [ ] Handle meeting:updated event
-  - [ ] Handle participant:joined event
-  - [ ] Handle participant:left event
-  - [ ] Fall back to polling on disconnect
-  - [ ] Attempt reconnection with backoff
-  - [ ] Return connection state (connected/polling/disconnected)
-  - [ ] Return latest meeting data
+- [x] Create `src/hooks/useRealtime.ts`
 
 ## 10. Data Hooks
 
-- [ ] Create `src/hooks/useMeetings.ts`
-  - [ ] `useMeetingList(params)` — paginated meeting list
-  - [ ] `useMeeting(id)` — single meeting
-  - [ ] `useCreateMeeting()` — mutation
-  - [ ] `useUpdateMeeting()` — mutation
-  - [ ] `useDeleteMeeting()` — mutation
-  - [ ] `useJoinMeeting()` — mutation
-  - [ ] `useLeaveMeeting()` — mutation
-  - [ ] `useMyMeetings()` — user's meetings
-  - [ ] Loading/error states for all
+- [x] Create `src/hooks/useMeetings.ts`
 
 ## 11. Polish & Edge Cases
 
