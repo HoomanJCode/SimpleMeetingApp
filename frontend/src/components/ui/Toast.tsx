@@ -36,7 +36,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-            className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm cursor-pointer transition-all animate-slide-up ${
+            className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm cursor-pointer transition-all ${
               t.variant === 'success' ? 'bg-green-600' :
               t.variant === 'error' ? 'bg-red-600' :
               t.variant === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
