@@ -168,14 +168,14 @@
 ## 9. Testing
 
 - [ ] Write auth service tests
-- [ ] Write meeting service tests
-- [ ] Write API endpoint tests (supertest)
-  - [ ] Health endpoint
+- [x] Write meeting service tests
+- [x] Write API endpoint tests (supertest)
+  - [x] Health endpoint
   - [ ] Auth endpoints (mock Google OAuth)
   - [ ] Meeting CRUD endpoints
   - [ ] Join/Leave endpoints
 - [ ] Write WebSocket event tests
-- [ ] Write validation error tests
+- [x] Write validation error tests
 - [ ] Write rate limiter tests
 
 ## 10. Final Polish
