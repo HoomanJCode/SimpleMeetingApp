@@ -1,16 +1,27 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { getEnv } from './config/env';
-import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { generalLimiter } from './middleware/rateLimiter';
+import { requestId } from './middleware/requestId';
+import { responseTime } from './middleware/responseTime';
 import routes from './routes';
 
 export function createApp() {
   const env = getEnv();
   const app = express();
+
+  // Request ID — must come first so all logs have it
+  app.use(requestId);
+
+  // Response time logging
+  app.use(responseTime);
+
+  // Compression — gzip responses
+  app.use(compression());
 
   // Security headers
   app.use(helmet());
@@ -30,12 +41,6 @@ export function createApp() {
 
   // Rate limiting
   app.use(generalLimiter);
-
-  // Request logging
-  app.use((req, _res, next) => {
-    logger.debug({ method: req.method, url: req.url }, 'incoming request');
-    next();
-  });
 
   // Routes
   app.use('/api', routes);
