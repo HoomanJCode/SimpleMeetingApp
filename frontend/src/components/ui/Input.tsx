@@ -21,7 +21,7 @@ export function Input(props: FieldProps) {
     'w-full border rounded-lg px-4 py-2.5 transition outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300';
 
-  const describedBy = [error && errorId, helperText && helperId].filter(Boolean).join(' ') || undefined;
+  const describedBy = [error && errorId, helperText && !error && helperId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div className="space-y-1">

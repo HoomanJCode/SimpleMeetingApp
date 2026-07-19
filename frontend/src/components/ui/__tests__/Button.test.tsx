@@ -29,19 +29,30 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toBeDisabled();
   });
 
-  it('renders all variants', () => {
+  it('renders all variants with expected classes', () => {
     const variants = ['primary', 'secondary', 'danger', 'ghost'] as const;
+    const expectedClasses: Record<typeof variants[number], string> = {
+      primary: 'bg-primary-600',
+      secondary: 'bg-white',
+      danger: 'bg-red-600',
+      ghost: 'bg-transparent',
+    };
     variants.forEach((variant) => {
       const { container } = render(<Button variant={variant}>{variant}</Button>);
-      expect(container.firstChild).toBeInTheDocument();
+      expect(container.firstChild).toHaveClass(expectedClasses[variant]);
     });
   });
 
-  it('renders all sizes', () => {
+  it('renders all sizes with expected classes', () => {
     const sizes = ['sm', 'md', 'lg'] as const;
+    const expectedClasses: Record<typeof sizes[number], string> = {
+      sm: 'px-3',
+      md: 'px-4',
+      lg: 'px-6',
+    };
     sizes.forEach((size) => {
       const { container } = render(<Button size={size}>{size}</Button>);
-      expect(container.firstChild).toBeInTheDocument();
+      expect(container.firstChild).toHaveClass(expectedClasses[size]);
     });
   });
 

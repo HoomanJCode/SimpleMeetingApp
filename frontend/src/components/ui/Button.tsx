@@ -36,7 +36,7 @@ export function Button({
       aria-busy={isLoading}
       {...props}
     >
-      {isLoading && <Spinner size="sm" />}
+      {isLoading && <span aria-hidden="true"><Spinner size="sm" /></span>}
       {children}
     </button>
   );

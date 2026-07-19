@@ -30,7 +30,7 @@ describe('Modal', () => {
   it('calls onClose when backdrop is clicked', () => {
     const handleClose = vi.fn();
     render(<Modal isOpen title="Confirm" onClose={handleClose}>Content</Modal>);
-    fireEvent.click(screen.getByRole('dialog').previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByTestId('modal-backdrop'));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
