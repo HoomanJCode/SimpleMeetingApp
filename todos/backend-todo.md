@@ -180,8 +180,8 @@
 
 ## 10. Final Polish
 
-- [ ] Add compression middleware
-- [ ] Add request ID middleware
-- [ ] Add response time logging
+- [x] Add compression middleware
+- [x] Add request ID middleware
+- [x] Add response time logging
 - [ ] Create production Dockerfile (optional)
 - [ ] Create `README.md` for backend
