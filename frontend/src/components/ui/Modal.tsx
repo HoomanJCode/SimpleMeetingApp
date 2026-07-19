@@ -12,8 +12,7 @@ const FOCUSABLE_SELECTOR =
   'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable]';
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-    .filter((el) => el.offsetParent !== null);
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
 }
 
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
