@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 
 interface BaseInputProps {
   label?: string;
@@ -13,6 +13,7 @@ type FieldProps = InputFieldProps | TextareaFieldProps;
 
 export function Input(props: FieldProps) {
   const { label, error, helperText, as, className = '', ...rest } = props;
+  const id = useId();
 
   const baseClasses =
     'w-full border rounded-lg px-4 py-2.5 transition outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500';
@@ -20,14 +21,20 @@ export function Input(props: FieldProps) {
 
   return (
     <div className="space-y-1">
-      {label && <label className="block text-sm font-medium text-gray-700">{label}</label>}
+      {label && (
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
+      )}
       {as === 'textarea' ? (
         <textarea
+          id={id}
           className={`${baseClasses} ${errorClasses} resize-y ${className}`}
           {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       ) : (
         <input
+          id={id}
           className={`${baseClasses} ${errorClasses} ${className}`}
           {...(rest as InputHTMLAttributes<HTMLInputElement>)}
         />
