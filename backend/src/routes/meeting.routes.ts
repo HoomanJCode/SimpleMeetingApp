@@ -18,6 +18,16 @@ import {
 export const meetingRouter = Router();
 
 /**
+ * GET /meetings/my
+ * Protected: gets meetings created or joined by current user.
+ * MUST be defined before /:id so 'my' is not caught as an ID param.
+ */
+meetingRouter.get('/my', authenticate, (req: Request, res: Response) => {
+  const result = getUserMeetings(req.user!.id);
+  res.json(result);
+});
+
+/**
  * GET /meetings
  * Public: lists meetings with optional filters and pagination.
  * Optionally includes user-specific join status if authenticated.
@@ -111,13 +121,4 @@ meetingRouter.post('/:id/leave', authenticate, (req: Request, res: Response) => 
   const id = req.params.id as string;
   const result = leaveMeeting(id, req.user!.id);
   res.json({ message: 'Successfully left', ...result });
-});
-
-/**
- * GET /meetings/my
- * Protected: gets meetings created or joined by current user.
- */
-meetingRouter.get('/my', authenticate, (req: Request, res: Response) => {
-  const result = getUserMeetings(req.user!.id);
-  res.json(result);
 });

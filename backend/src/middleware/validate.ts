@@ -19,10 +19,30 @@ export function validate(options: ValidateOptions) {
         req.body = options.body.parse(req.body);
       }
       if (options.query) {
-        req.query = options.query.parse(req.query) as any;
+        const parsed = options.query.parse(req.query);
+        // Express 5 makes req.query a getter-only property
+        try {
+          req.query = parsed as any;
+        } catch {
+          Object.defineProperty(req, 'query', {
+            value: parsed,
+            writable: true,
+            configurable: true,
+          });
+        }
       }
       if (options.params) {
-        req.params = options.params.parse(req.params) as any;
+        const parsed = options.params.parse(req.params);
+        // Express 5 may also make req.params getter-only
+        try {
+          req.params = parsed as any;
+        } catch {
+          Object.defineProperty(req, 'params', {
+            value: parsed,
+            writable: true,
+            configurable: true,
+          });
+        }
       }
       next();
     } catch (err) {
