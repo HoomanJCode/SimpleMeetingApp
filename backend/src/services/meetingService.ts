@@ -3,6 +3,14 @@ import { Meeting, MeetingFilters, PaginatedResult } from '../types/models';
 import { CreateMeetingInput, UpdateMeetingInput } from './meetingSchemas';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import {
+  emitMeetingCreated,
+  emitMeetingUpdated,
+  emitMeetingDeleted,
+  emitMeetingCancelled,
+  emitParticipantJoined,
+  emitParticipantLeft,
+} from '../websocket/events';
 
 // ---- DB row types (snake_case) ----
 
@@ -84,7 +92,7 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
 
   logger.info({ meetingId: id, hostId }, 'Meeting created');
 
-  return {
+  const meeting: Meeting = {
     id,
     hostId,
     title: data.title,
@@ -100,6 +108,11 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
     participantCount: 1,
     isJoined: true,
   };
+
+  // Broadcast to all connected clients
+  try { emitMeetingCreated(meeting); } catch { /* WebSocket may not be initialized yet */ }
+
+  return meeting;
 }
 
 /**
@@ -249,7 +262,17 @@ export function updateMeeting(id: string, userId: string, data: UpdateMeetingInp
 
   logger.info({ meetingId: id, userId }, 'Meeting updated');
 
-  return getMeetingById(id, userId);
+  const updatedMeeting = getMeetingById(id, userId);
+
+  // Broadcast updates
+  try {
+    if (data.status === 'cancelled') {
+      emitMeetingCancelled(id);
+    }
+    emitMeetingUpdated(updatedMeeting);
+  } catch { /* WebSocket may not be initialized yet */ }
+
+  return updatedMeeting;
 }
 
 /**
@@ -271,6 +294,9 @@ export function deleteMeeting(id: string, userId: string): void {
   db.prepare('DELETE FROM meetings WHERE id = ?').run(id);
 
   logger.info({ meetingId: id, userId }, 'Meeting deleted');
+
+  // Broadcast deletion
+  try { emitMeetingDeleted(id); } catch { /* WebSocket may not be initialized yet */ }
 }
 
 /**
@@ -315,6 +341,19 @@ export function joinMeeting(meetingId: string, userId: string): { participantCou
 
   logger.info({ meetingId, userId }, 'User joined meeting');
 
+  // Broadcast participant joined
+  try {
+    const user = db.prepare('SELECT name, avatar_url FROM users WHERE id = ?').get(userId) as { name: string; avatar_url: string | null };
+    emitParticipantJoined(meetingId, {
+      id: userId,
+      name: user?.name ?? 'Unknown',
+      avatarUrl: user?.avatar_url ?? null,
+      joinedAt: new Date().toISOString(),
+    });
+    const updated = getMeetingById(meetingId, userId);
+    emitMeetingUpdated(updated);
+  } catch { /* WebSocket may not be initialized yet */ }
+
   return { participantCount: newCount };
 }
 
@@ -350,6 +389,13 @@ export function leaveMeeting(meetingId: string, userId: string): { participantCo
     .get(meetingId) as { count: number };
 
   logger.info({ meetingId, userId }, 'User left meeting');
+
+  // Broadcast participant left
+  try {
+    emitParticipantLeft(meetingId, userId);
+    const updated = getMeetingById(meetingId, userId);
+    emitMeetingUpdated(updated);
+  } catch { /* WebSocket may not be initialized yet */ }
 
   return { participantCount: countRow.count };
 }

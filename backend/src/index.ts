@@ -8,6 +8,7 @@ import { createApp } from './app';
 import { logger } from './utils/logger';
 import { getDb, closeDb } from './db/connection';
 import { runMigrations } from './db/migrate';
+import { createWebSocketServer } from './websocket';
 
 async function main() {
   // Load and validate environment variables
@@ -23,6 +24,9 @@ async function main() {
 
   // Create HTTP server
   const server = http.createServer(app);
+
+  // Initialize WebSocket server
+  createWebSocketServer(server);
 
   // Start listening
   server.listen(env.PORT, env.HOST, () => {
