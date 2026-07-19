@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { healthRouter } from './health.routes';
 import { authRouter } from './auth.routes';
 import { meetingRouter } from './meeting.routes';
+import testRouter from './test.routes';
 
 const router = Router();
 
@@ -13,5 +14,8 @@ router.use('/auth', authRouter);
 
 // Meetings
 router.use('/meetings', meetingRouter);
+
+// Dev/test-only routes for E2E seeding (returns 404 in production)
+router.use('/test', testRouter);
 
 export default router;

@@ -1,7 +1,7 @@
 import { getDb } from '../db/connection';
 import { getEnv } from '../config/env';
 import { User, AuthTokens, JwtPayload } from '../types/models';
-import { generateAccessToken, generateRefreshToken, hashToken } from '../utils/jwt';
+import { generateAccessToken, generateRefreshToken, hashToken, parseExpiration } from '../utils/jwt';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
@@ -152,26 +152,6 @@ function createOrUpdateUser(profile: GoogleUserInfo): User {
 }
 
 // ---- Token management ----
-
-/**
- * Parses an expiration duration string (e.g. "30d", "7d", "24h") into milliseconds.
- * Defaults to 30 days if parsing fails.
- */
-function parseExpiration(expiration: string): number {
-  const match = expiration.match(/^(\d+)\s*(d|h|m|s)$/);
-  if (!match) return 30 * 24 * 60 * 60 * 1000; // default 30 days
-
-  const value = parseInt(match[1], 10);
-  const unit = match[2];
-
-  switch (unit) {
-    case 'd': return value * 24 * 60 * 60 * 1000;
-    case 'h': return value * 60 * 60 * 1000;
-    case 'm': return value * 60 * 1000;
-    case 's': return value * 1000;
-    default: return 30 * 24 * 60 * 60 * 1000;
-  }
-}
 
 /**
  * Generates access and refresh tokens for a user.
