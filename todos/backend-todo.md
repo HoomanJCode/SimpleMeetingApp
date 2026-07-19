@@ -129,26 +129,28 @@
 
 ## 7. WebSocket
 
-- [ ] Create `src/websocket/index.ts`
-  - [ ] Socket.IO server setup with CORS
-  - [ ] Auth middleware (optional, for JWT)
-  - [ ] Connection handler
-  - [ ] `meeting:subscribe` handler — joins room
-  - [ ] `meeting:unsubscribe` handler — leaves room
-  - [ ] Disconnect handler — cleanup
-- [ ] Create `src/websocket/events.ts`
-  - [ ] `emitMeetingCreated(meeting)` — broadcast to global
-  - [ ] `emitMeetingUpdated(meeting)` — broadcast to meeting room
-  - [ ] `emitMeetingDeleted(meetingId)` — broadcast to global + room
-  - [ ] `emitMeetingCancelled(meetingId)` — broadcast to room
-  - [ ] `emitParticipantJoined(meetingId, participant)` — to room
-  - [ ] `emitParticipantLeft(meetingId, userId)` — to room
-- [ ] Update meeting service to call WebSocket events
-  - [ ] On create → `emitMeetingCreated`
-  - [ ] On update → `emitMeetingUpdated`
-  - [ ] On delete → `emitMeetingDeleted`
-  - [ ] On join → `emitParticipantJoined` + `emitMeetingUpdated`
-  - [ ] On leave → `emitParticipantLeft` + `emitMeetingUpdated`
+- [x] Create `src/websocket/index.ts`
+  - [x] Socket.IO server setup with CORS
+  - [x] Auth middleware (optional, for JWT)
+  - [x] Connection handler
+  - [x] `meeting:subscribe` handler — joins room
+  - [x] `meeting:unsubscribe` handler — leaves room
+  - [x] Global room auto-join for meeting list updates
+  - [x] Disconnect handler — cleanup
+- [x] Create `src/websocket/events.ts`
+  - [x] `emitMeetingCreated(meeting)` — broadcast to global
+  - [x] `emitMeetingUpdated(meeting)` — broadcast to meeting room
+  - [x] `emitMeetingDeleted(meetingId)` — broadcast to global + room
+  - [x] `emitMeetingCancelled(meetingId)` — broadcast to room
+  - [x] `emitParticipantJoined(meetingId, participant)` — to room
+  - [x] `emitParticipantLeft(meetingId, userId)` — to room
+- [x] Update meeting service to call WebSocket events
+  - [x] On create → `emitMeetingCreated`
+  - [x] On update → `emitMeetingUpdated` + `emitMeetingCancelled` if status=cancelled
+  - [x] On delete → `emitMeetingDeleted`
+  - [x] On join → `emitParticipantJoined` + `emitMeetingUpdated`
+  - [x] On leave → `emitParticipantLeft` + `emitMeetingUpdated`
+- [x] Wire WebSocket server into `index.ts`
 
 ## 8. Middleware & Error Handling
 
