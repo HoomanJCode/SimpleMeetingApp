@@ -167,16 +167,16 @@
 
 ## 9. Testing
 
-- [ ] Write auth service tests
+- [x] Write auth service tests
 - [x] Write meeting service tests
 - [x] Write API endpoint tests (supertest)
   - [x] Health endpoint
-  - [ ] Auth endpoints (mock Google OAuth)
-  - [ ] Meeting CRUD endpoints
-  - [ ] Join/Leave endpoints
-- [ ] Write WebSocket event tests
+  - [ ] Auth endpoints (mock Google OAuth) _(covered in `tests/` E2E)_
+  - [x] Meeting CRUD endpoints
+  - [x] Join/Leave endpoints
+- [ ] Write WebSocket event tests _(pending)_
 - [x] Write validation error tests
-- [ ] Write rate limiter tests
+- [x] Write rate limiter tests
 
 ## 10. Final Polish
 
@@ -184,4 +184,4 @@
 - [x] Add request ID middleware
 - [x] Add response time logging
 - [ ] Create production Dockerfile (optional)
-- [ ] Create `README.md` for backend
+- [ ] Create `README.md` for backend _(pending)_

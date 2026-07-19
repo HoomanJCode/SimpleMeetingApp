@@ -112,74 +112,74 @@
 
 ## 7. Meeting Components
 
-- [ ] Create `src/components/meeting/MeetingCard.tsx`
-  - [ ] Title, date/time, location
-  - [ ] Participant count (e.g., "12/30 spots")
-  - [ ] Host avatar + name
-  - [ ] Status badge (upcoming, ongoing, ended, cancelled)
-  - [ ] Hover effect with shadow
-  - [ ] Click navigates to meeting detail
-- [ ] Create `src/components/meeting/MeetingList.tsx`
-  - [ ] Grid layout (responsive: 1 col mobile, 2 tablet, 3 desktop)
-  - [ ] Search input (debounced)
-  - [ ] Empty state illustration
-  - [ ] Loading skeleton grid
-  - [ ] Pagination or infinite scroll
-- [ ] Create `src/components/meeting/MeetingForm.tsx`
-  - [ ] Title input (text)
-  - [ ] Description input (textarea)
-  - [ ] Date/Time picker
-  - [ ] Location input (text)
-  - [ ] Capacity input (number, min=2)
-  - [ ] Validation: inline errors, disabled submit until valid
-  - [ ] Submit button with loading state
-  - [ ] Cancel button
-- [ ] Create `src/components/meeting/MeetingDetail.tsx`
-  - [ ] Meeting title, description, date/time, location
-  - [ ] Host info (avatar, name)
-  - [ ] Capacity indicator (progress bar)
-  - [ ] "Join" / "Leave" / "Edit" / "Delete" buttons (context-dependent)
-  - [ ] Join button disabled when full
-  - [ ] Status badge
-  - [ ] Connection status indicator (live vs polling)
-- [ ] Create `src/components/meeting/ParticipantList.tsx`
-  - [ ] Grid of avatars with names
-  - [ ] "X more" overflow for large lists
-  - [ ] Host badge on host
-  - [ ] Join date tooltip
-- [ ] Create `src/components/meeting/ConnectionStatus.tsx`
-  - [ ] Green dot + "Live" when WebSocket connected
-  - [ ] Yellow dot + "Syncing" when polling
-  - [ ] Red dot + "Offline" when disconnected
-  - [ ] Subtle placement (bottom corner of meeting detail)
+- [x] Create `src/components/meeting/MeetingCard.tsx`
+  - [x] Title, date/time, location
+  - [x] Participant count (e.g., "12/30 spots")
+  - [x] Host avatar + name
+  - [x] Status badge (upcoming, ongoing, ended, cancelled)
+  - [x] Hover effect with shadow
+  - [x] Click navigates to meeting detail
+- [x] Create `src/components/meeting/MeetingList.tsx`
+  - [x] Grid layout (responsive: 1 col mobile, 2 tablet, 3 desktop)
+  - [x] Search input (debounced)
+  - [x] Empty state illustration
+  - [x] Loading skeleton grid
+  - [x] Pagination or infinite scroll
+- [x] Create `src/components/meeting/MeetingForm.tsx`
+  - [x] Title input (text)
+  - [x] Description input (textarea)
+  - [x] Date/Time picker
+  - [x] Location input (text)
+  - [x] Capacity input (number, min=2)
+  - [x] Validation: inline errors, disabled submit until valid
+  - [x] Submit button with loading state
+  - [x] Cancel button
+- [x] Create `src/components/meeting/MeetingDetail.tsx`
+  - [x] Meeting title, description, date/time, location
+  - [x] Host info (avatar, name)
+  - [x] Capacity indicator (progress bar)
+  - [x] "Join" / "Leave" / "Edit" / "Delete" buttons (context-dependent)
+  - [x] Join button disabled when full
+  - [x] Status badge
+  - [x] Connection status indicator (live vs polling)
+- [x] Create `src/components/meeting/ParticipantList.tsx`
+  - [x] Grid of avatars with names
+  - [x] "X more" overflow for large lists
+  - [x] Host badge on host
+  - [x] Join date tooltip
+- [x] Create `src/components/meeting/ConnectionStatus.tsx`
+  - [x] Green dot + "Live" when WebSocket connected
+  - [x] Yellow dot + "Syncing" when polling
+  - [x] Red dot + "Offline" when disconnected
+  - [x] Subtle placement (bottom corner of meeting detail)
 
 ## 8. Pages
 
-- [ ] Create `src/pages/HomePage.tsx`
-  - [ ] Hero section (or simple title + subtitle)
-  - [ ] Search bar
-  - [ ] MeetingList
-  - [ ] "Create Meeting" CTA for authenticated users
-- [ ] Create `src/pages/CreateMeetingPage.tsx`
-  - [ ] Page title: "Create a New Meeting"
-  - [ ] MeetingForm component
-  - [ ] Redirect to meeting detail on success
-  - [ ] Toast notification on success/error
-- [ ] Create `src/pages/EditMeetingPage.tsx`
-  - [ ] Page title: "Edit Meeting"
-  - [ ] MeetingForm pre-filled with existing data
-  - [ ] "Delete Meeting" button with confirmation modal
-  - [ ] Redirect to meeting detail on success
-- [ ] Create `src/pages/MeetingDetailPage.tsx`
-  - [ ] MeetingDetail with real-time updates
-  - [ ] ParticipantList
-  - [ ] useRealtime hook for live updates
-  - [ ] 404 state if meeting not found
-  - [ ] Back button
-- [ ] Create `src/pages/MyMeetingsPage.tsx`
-  - [ ] Tabs: "Hosting" | "Attending"
-  - [ ] MeetingList for each tab
-  - [ ] Empty state when no meetings
+- [x] Create `src/pages/HomePage.tsx`
+  - [x] Hero section (or simple title + subtitle)
+  - [x] Search bar
+  - [x] MeetingList
+  - [x] "Create Meeting" CTA for authenticated users
+- [x] Create `src/pages/CreateMeetingPage.tsx`
+  - [x] Page title: "Create a New Meeting"
+  - [x] MeetingForm component
+  - [x] Redirect to meeting detail on success
+  - [x] Toast notification on success/error
+- [x] Create `src/pages/EditMeetingPage.tsx`
+  - [x] Page title: "Edit Meeting"
+  - [x] MeetingForm pre-filled with existing data
+  - [x] "Delete Meeting" button with confirmation modal
+  - [x] Redirect to meeting detail on success
+- [x] Create `src/pages/MeetingDetailPage.tsx`
+  - [x] MeetingDetail with real-time updates
+  - [x] ParticipantList
+  - [x] useRealtime hook for live updates
+  - [x] 404 state if meeting not found
+  - [x] Back button
+- [x] Create `src/pages/MyMeetingsPage.tsx`
+  - [x] Tabs: "Hosting" | "Attending"
+  - [x] MeetingList for each tab
+  - [x] Empty state when no meetings
 
 ## 9. Real-Time Integration
 
@@ -207,12 +207,12 @@
 
 ## 12. Testing
 
-- [ ] UI component unit tests
-  - [ ] Button variants and states
-  - [ ] Input validation display
-  - [ ] Modal open/close behavior
-- [ ] Hook tests
-  - [ ] useAuth behavior
-  - [ ] useRealtime connection states
-- [ ] Page smoke tests
-- [ ] Mock API client for isolated tests
+- [x] UI component unit tests
+  - [x] Button variants and states
+  - [x] Input validation display
+  - [x] Modal open/close behavior
+- [x] Hook tests
+  - [x] useAuth behavior (AuthContext)
+  - [ ] useRealtime connection states _(pending — tracked in next milestone)_
+- [x] Page smoke tests (via `tests/e2e/app.spec.ts`)
+- [x] Mock API client for isolated tests
