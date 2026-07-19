@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export function AuthCallbackPage() {
+  useDocumentTitle('Signing In...');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setTokens } = useAuth();
@@ -21,7 +23,7 @@ export function AuthCallbackPage() {
 
   return (
     <div className="flex justify-center items-center py-20">
-      <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-primary-600" />
+      <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 dark:border-gray-700 border-t-primary-600" />
     </div>
   );
 }
