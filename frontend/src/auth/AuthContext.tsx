@@ -10,6 +10,7 @@ interface AuthState {
   logout: () => void;
   getToken: () => string | null;
   setTokens: (tokens: AuthTokens) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -25,9 +26,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getToken = useCallback(() => accessToken, []);
   const getRefreshToken = useCallback(() => refreshTokenValue, []);
 
+  /**
+   * Stores tokens only. Must stay synchronous — the refresh interceptor in
+   * api/client.ts calls this on every successful /auth/refresh; if it were
+   * async with side effects it would recurse via /auth/me → 401 → refresh.
+   *
+   * Callers that need to update `user` post-token-change should explicitly
+   * invoke `refreshUser()` (which is what AuthCallbackPage does on the
+   * OAuth round-trip).
+   */
   const setTokens = useCallback((tokens: AuthTokens) => {
     accessToken = tokens.accessToken;
     refreshTokenValue = tokens.refreshToken;
+  }, []);
+
+  /**
+   * Fetches the current user. Used by OAuth callback after setTokens, and
+   * exposed for any caller that needs to manually re-sync user state.
+   * Failures are intentionally swallowed: a transient /auth/me failure
+   * should not log the user out.
+   */
+  const refreshUser = useCallback(async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+    } catch {
+      /* transient failure — leave user state alone */
+    }
   }, []);
 
   const login = useCallback(() => {
@@ -45,27 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     configureApiClient(getToken, getRefreshToken, setTokens, logout);
 
-    const restoreSession = async () => {
-      try {
-        const stored = getRefreshToken();
-        if (stored) {
-          const currentUser = await getCurrentUser();
-          setUser(currentUser);
-        }
-      } catch {
-        // Session expired, clear tokens
-        accessToken = null;
-        refreshTokenValue = null;
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    restoreSession();
-  }, [getToken, getRefreshToken, setTokens, logout]);
+    if (getRefreshToken()) {
+      refreshUser().finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [getToken, getRefreshToken, setTokens, refreshUser, logout]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, getToken, setTokens }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, logout, getToken, setTokens, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

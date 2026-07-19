@@ -7,19 +7,25 @@ export function AuthCallbackPage() {
   useDocumentTitle('Signing In...');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setTokens } = useAuth();
+  const { setTokens, refreshUser } = useAuth();
 
   useEffect(() => {
     const token = searchParams.get('token');
     const refreshToken = searchParams.get('refreshToken');
 
-    if (token && refreshToken) {
-      setTokens({ accessToken: token, refreshToken });
+    const finish = async () => {
+      if (token && refreshToken) {
+        setTokens({ accessToken: token, refreshToken });
+        // setTokens is sync; refreshUser explicitly resyncs `user` state so
+        // the header/CTA reflect signed-in immediately (restoreSession only
+        // ran once at AuthProvider mount, before tokens arrived).
+        await refreshUser();
+      }
       navigate('/', { replace: true });
-    } else {
-      navigate('/', { replace: true });
-    }
-  }, [searchParams, navigate, setTokens]);
+    };
+
+    finish();
+  }, [searchParams, navigate, setTokens, refreshUser]);
 
   return (
     <div className="flex justify-center items-center py-20">
