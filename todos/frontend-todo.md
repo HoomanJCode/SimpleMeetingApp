@@ -2,71 +2,72 @@
 
 ## 1. Project Setup
 
-- [ ] Create Vite + React + TypeScript project
-- [ ] Install dependencies:
+- [x] Create Vite + React + TypeScript project
+- [x] Install dependencies:
   - `react`, `react-dom`, `react-router-dom`, `socket.io-client`
-- [ ] Install dev dependencies:
+- [x] Install dev dependencies:
   - `typescript`, `@types/react`, `@types/react-dom`
   - `vite`, `@vitejs/plugin-react`
   - `tailwindcss`, `postcss`, `autoprefixer`
   - `vitest`, `@testing-library/react`, `jsdom`
-- [ ] Configure `tailwind.config.js`
-- [ ] Configure `postcss.config.js`
-- [ ] Configure `vite.config.ts` (proxy API requests to backend)
-- [ ] Configure `tsconfig.json`
-- [ ] Add scripts: `dev`, `build`, `preview`, `test`, `lint`
+- [x] Configure `tailwind.config.js`
+- [x] Configure `postcss.config.js`
+- [x] Configure `vite.config.ts` (proxy API requests to backend)
+- [x] Configure `tsconfig.json`
+- [x] Add scripts: `dev`, `build`, `preview`, `test`, `lint`
 
 ## 2. Core App Structure
 
-- [ ] Create `src/main.tsx` — React DOM render with providers
-- [ ] Create `src/index.css` — Tailwind directives + global styles
-- [ ] Create `src/App.tsx` — Router setup
-  - [ ] `/` → HomePage
-  - [ ] `/meetings/new` → CreateMeetingPage (protected)
-  - [ ] `/meetings/:id` → MeetingDetailPage
-  - [ ] `/meetings/:id/edit` → EditMeetingPage (protected)
-  - [ ] `/my-meetings` → MyMeetingsPage (protected)
-  - [ ] `/auth/callback` → AuthCallbackPage
-  - [ ] `*` → NotFoundPage
-- [ ] Create `src/types/index.ts` — shared TypeScript types
+- [x] Create `src/main.tsx` — React DOM render with providers
+- [x] Create `src/index.css` — Tailwind directives + global styles
+- [x] Create `src/App.tsx` — Router setup
+  - [x] `/` → HomePage
+  - [x] `/meetings/new` → CreateMeetingPage (protected)
+  - [x] `/meetings/:id` → MeetingDetailPage
+  - [x] `/meetings/:id/edit` → EditMeetingPage (protected)
+  - [x] `/my-meetings` → MyMeetingsPage (protected)
+  - [x] `/auth/callback` → AuthCallbackPage
+  - [x] `*` → NotFoundPage
+- [x] Create `src/types/index.ts` — shared TypeScript types
 
 ## 3. API Client
 
-- [ ] Create `src/api/client.ts`
-  - [ ] Axios or fetch wrapper with base URL
-  - [ ] Request interceptor: adds JWT to Authorization header
-  - [ ] Response interceptor: handles 401 → refresh token → retry
-  - [ ] Error normalization
-- [ ] Create `src/api/auth.ts`
-  - [ ] `getCurrentUser()` → GET /api/auth/me
-  - [ ] `refreshToken(refreshToken)` → POST /api/auth/refresh
-- [ ] Create `src/api/meetings.ts`
-  - [ ] `getMeetings(params)` → GET /api/meetings
-  - [ ] `getMeeting(id)` → GET /api/meetings/:id
-  - [ ] `createMeeting(data)` → POST /api/meetings
-  - [ ] `updateMeeting(id, data)` → PUT /api/meetings/:id
-  - [ ] `deleteMeeting(id)` → DELETE /api/meetings/:id
-  - [ ] `joinMeeting(id)` → POST /api/meetings/:id/join
-  - [ ] `leaveMeeting(id)` → POST /api/meetings/:id/leave
-  - [ ] `getMyMeetings()` → GET /api/users/me/meetings
+- [x] Create `src/api/client.ts`
+  - [x] Fetch wrapper with base URL
+  - [x] Request interceptor: adds JWT to Authorization header
+  - [x] Response interceptor: handles 401 → refresh token → retry
+  - [x] Error normalization
+- [x] Create `src/api/auth.ts`
+  - [x] `getCurrentUser()` → GET /api/auth/me
+  - [x] `refreshToken(refreshToken)` → POST /api/auth/refresh
+- [x] Create `src/api/meetings.ts`
+  - [x] `getMeetings(params)` → GET /api/meetings
+  - [x] `getMeeting(id)` → GET /api/meetings/:id
+  - [x] `createMeeting(data)` → POST /api/meetings
+  - [x] `updateMeeting(id, data)` → PUT /api/meetings/:id
+  - [x] `deleteMeeting(id)` → DELETE /api/meetings/:id
+  - [x] `joinMeeting(id)` → POST /api/meetings/:id/join
+  - [x] `leaveMeeting(id)` → POST /api/meetings/:id/leave
+  - [x] `getMyMeetings()` → GET /meetings/my
 
 ## 4. Authentication (Frontend)
 
-- [ ] Create `src/auth/AuthContext.tsx`
-  - [ ] `user: User | null`
-  - [ ] `isLoading: boolean`
-  - [ ] `login()` — redirect to `/api/auth/google`
-  - [ ] `logout()` — clear tokens, redirect home
-  - [ ] `getToken()` — return current access token
-  - [ ] On mount: check if returning from OAuth callback
-- [ ] Create `src/auth/useAuth.ts` — convenience hook
-- [ ] Create `src/auth/ProtectedRoute.tsx`
-  - [ ] Redirects to home with message if not authenticated
-  - [ ] Shows spinner while auth state is loading
-- [ ] Create `src/pages/AuthCallbackPage.tsx`
-  - [ ] Extracts `token` and `refreshToken` from URL query
-  - [ ] Stores tokens in memory via AuthContext
-  - [ ] Redirects to home
+- [x] Create `src/auth/AuthContext.tsx`
+  - [x] `user: User | null`
+  - [x] `isLoading: boolean`
+  - [x] `login()` — redirect to `/api/auth/google`
+  - [x] `logout()` — clear tokens, redirect home
+  - [x] `getToken()` — return current access token
+  - [x] API client wiring with `configureApiClient`
+  - [x] Token refresh on 401 with automatic retry
+- [x] Create `src/auth/useAuth.ts` — convenience hook
+- [x] Create `src/auth/ProtectedRoute.tsx`
+  - [x] Redirects to home with message if not authenticated
+  - [x] Shows spinner while auth state is loading
+- [x] Create `src/pages/AuthCallbackPage.tsx`
+  - [x] Extracts `token` and `refreshToken` from URL query
+  - [x] Stores tokens in memory via AuthContext
+  - [x] Redirects to home
 
 ## 5. UI Components
 
