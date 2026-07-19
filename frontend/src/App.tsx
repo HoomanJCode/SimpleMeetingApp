@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
@@ -17,9 +18,10 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 function App() {
   return (
     <AuthProvider>
-      <Layout>
-        <Suspense fallback={<div className="flex justify-center py-20"><Spinner size="lg" /></div>}>
-          <Routes>
+      <ErrorBoundary>
+        <Layout>
+          <Suspense fallback={<div className="flex justify-center py-20"><Spinner size="lg" /></div>}>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/meetings/new" element={<ProtectedRoute><CreateMeetingPage /></ProtectedRoute>} />
@@ -30,8 +32,9 @@ function App() {
           </Routes>
         </Suspense>
       </Layout>
-    </AuthProvider>
-  );
+    </ErrorBoundary>
+  </AuthProvider>
+);
 }
 
 export default App;

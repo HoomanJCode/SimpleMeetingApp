@@ -41,6 +41,8 @@ export function MeetingDetail({
   const isFull = spotsLeft <= 0;
   const isPast = meeting.status === 'ended' || meeting.status === 'cancelled';
 
+  const statusLabel = meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -48,11 +50,11 @@ export function MeetingDetail({
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Badge variant={statusBadgeVariant(meeting.status)}>
-              {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
+              {statusLabel}
             </Badge>
             <ConnectionStatus state={connectionState} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">{meeting.title}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{meeting.title}</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -70,35 +72,35 @@ export function MeetingDetail({
       </div>
 
       {/* Host info */}
-      <div className="flex items-center gap-3 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+      <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
         <Avatar name={meeting.hostName ?? 'Unknown'} src={meeting.hostAvatarUrl} size="md" />
         <div>
-          <p className="text-sm text-gray-500">Hosted by</p>
-          <p className="font-medium text-gray-900">{meeting.hostName}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Hosted by</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100">{meeting.hostName}</p>
         </div>
       </div>
 
       {/* Meeting info grid */}
       <div className="grid sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500 mb-1">Date & Time</p>
-          <p className="font-medium">{date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          <p className="text-gray-600">{date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Date & Time</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100">{date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="text-gray-600 dark:text-gray-300">{date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500 mb-1">Location</p>
-          <p className="font-medium">{meeting.location}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Location</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100">{meeting.location}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500 mb-1">Capacity</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Capacity</p>
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
               <div
                 className="bg-primary-500 h-2.5 rounded-full transition-all"
                 style={{ width: `${((meeting.participantCount ?? 0) / meeting.capacity) * 100}%` }}
               />
             </div>
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {meeting.participantCount}/{meeting.capacity}
             </span>
           </div>
@@ -106,9 +108,9 @@ export function MeetingDetail({
       </div>
 
       {/* Description */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-3">About this meeting</h3>
-        <p className="text-gray-600 whitespace-pre-wrap">{meeting.description}</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">About this meeting</h3>
+        <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{meeting.description}</p>
       </div>
 
       {/* Join/Leave button */}
@@ -128,7 +130,7 @@ export function MeetingDetail({
 
       {/* Participants */}
       {meeting.participants && meeting.participants.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
           <ParticipantList participants={meeting.participants} hostId={meeting.hostId} />
         </div>
       )}
@@ -145,7 +147,7 @@ export function MeetingDetail({
           </>
         }
       >
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           Are you sure you want to delete &quot;{meeting.title}&quot;? This action cannot be undone.
         </p>
       </Modal>

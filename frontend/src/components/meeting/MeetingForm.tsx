@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import type { CreateMeetingInput } from '../../api/meetings';
 
 interface MeetingFormProps {
@@ -6,14 +6,34 @@ interface MeetingFormProps {
   isLoading: boolean;
   error: string | null;
   initialData?: CreateMeetingInput;
+  submitLabel?: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function MeetingForm({ onSubmit, isLoading, error, initialData }: MeetingFormProps) {
+export function MeetingForm({
+  onSubmit,
+  isLoading,
+  error,
+  initialData,
+  submitLabel = 'Create Meeting',
+  onDirtyChange,
+}: MeetingFormProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [dateTime, setDateTime] = useState(initialData?.dateTime || '');
   const [location, setLocation] = useState(initialData?.location || '');
   const [capacity, setCapacity] = useState(initialData?.capacity || 10);
+
+  const isDirty =
+    title !== (initialData?.title || '') ||
+    description !== (initialData?.description || '') ||
+    dateTime !== (initialData?.dateTime || '') ||
+    location !== (initialData?.location || '') ||
+    capacity !== (initialData?.capacity || 10);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,13 +41,13 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+    <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Title *</label>
         <input
           type="text"
           value={title}
@@ -35,13 +55,13 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
           required
           minLength={3}
           maxLength={200}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           placeholder="React Meetup July"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description *</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -49,25 +69,25 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
           minLength={10}
           maxLength={5000}
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-y"
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-y"
           placeholder="Tell attendees what this meeting is about..."
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date & Time *</label>
           <input
             type="datetime-local"
             value={dateTime}
             onChange={(e) => setDateTime(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Capacity *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Capacity *</label>
           <input
             type="number"
             value={capacity}
@@ -75,13 +95,13 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
             required
             min={2}
             max={10000}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+            className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Location *</label>
         <input
           type="text"
           value={location}
@@ -89,7 +109,7 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
           required
           minLength={2}
           maxLength={300}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           placeholder="Tehran Coworking Hub"
         />
       </div>
@@ -100,7 +120,7 @@ export function MeetingForm({ onSubmit, isLoading, error, initialData }: Meeting
           disabled={isLoading}
           className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
-          {isLoading ? 'Creating...' : 'Create Meeting'}
+          {isLoading ? 'Saving...' : submitLabel}
         </button>
       </div>
     </form>

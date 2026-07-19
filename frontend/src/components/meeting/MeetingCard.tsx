@@ -14,7 +14,7 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
   return (
     <Link
       to={`/meetings/${meeting.id}`}
-      className="block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-primary-200 transition-all group"
+      className="block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all group"
     >
       <div className="flex items-start justify-between mb-3">
         <Badge variant={statusBadgeVariant(meeting.status)}>
@@ -25,11 +25,11 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
         </span>
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary-700 transition-colors line-clamp-2">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
         {meeting.title}
       </h3>
 
-      <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+      <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 mb-2">
         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -37,7 +37,7 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
         <span className="truncate">{meeting.location}</span>
       </div>
 
-      <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-4">
+      <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 mb-4">
         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -46,10 +46,10 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
         </span>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <Avatar name={meeting.hostName ?? 'Unknown'} src={meeting.hostAvatarUrl} size="sm" />
-          <span className="text-sm text-gray-600 truncate max-w-[120px]">{meeting.hostName}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{meeting.hostName}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,9 +2,11 @@ import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useMeetingList } from '../hooks/useMeetings';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { MeetingList } from '../components/meeting/MeetingList';
 
 export function HomePage() {
+  useDocumentTitle('Find & Host Tech Meetups');
   const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -18,11 +20,11 @@ export function HomePage() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <div className="text-center py-12 bg-gradient-to-br from-primary-50 to-blue-50 rounded-2xl -mx-4 px-4">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+      <div className="text-center py-12 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl -mx-4 px-4 transition-colors">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
           Find & Host Tech Meetups
         </h1>
-        <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
           Discover tech meetups, workshops, and networking events near you.
           Or create your own and bring the community together.
         </p>
@@ -34,7 +36,7 @@ export function HomePage() {
             Create a Meeting
           </Link>
         ) : (
-          <p className="text-gray-500">Sign in to create and join meetings</p>
+          <p className="text-gray-500 dark:text-gray-400">Sign in to create and join meetings</p>
         )}
       </div>
 
