@@ -18,4 +18,9 @@ describe('useDocumentTitle', () => {
     unmount();
     expect(document.title).toBe(original);
   });
+
+  it('falls back to app name when title is empty', () => {
+    renderHook(() => useDocumentTitle(''));
+    expect(document.title).toBe('IrMeeting');
+  });
 });

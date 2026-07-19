@@ -19,4 +19,20 @@ describe('Input', () => {
     fireEvent.change(input, { target: { value: 'Alice' } });
     expect(input).toHaveValue('Alice');
   });
+
+  it('renders textarea when as="textarea"', () => {
+    render(<Input label="Description" as="textarea" />);
+    expect(screen.getByLabelText(/description/i)).toBeInstanceOf(HTMLTextAreaElement);
+  });
+
+  it('associates error and helper text via aria-describedby', () => {
+    const { rerender } = render(<Input label="Email" helperText="We will never share your email" />);
+    let input = screen.getByLabelText(/email/i);
+    expect(input).toHaveAttribute('aria-describedby');
+
+    rerender(<Input label="Email" error="Invalid email" />);
+    input = screen.getByLabelText(/email/i);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby');
+  });
 });

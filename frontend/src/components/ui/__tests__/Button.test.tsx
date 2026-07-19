@@ -28,4 +28,27 @@ describe('Button', () => {
     render(<Button disabled>Disabled</Button>);
     expect(screen.getByRole('button')).toBeDisabled();
   });
+
+  it('renders all variants', () => {
+    const variants = ['primary', 'secondary', 'danger', 'ghost'] as const;
+    variants.forEach((variant) => {
+      const { container } = render(<Button variant={variant}>{variant}</Button>);
+      expect(container.firstChild).toBeInTheDocument();
+    });
+  });
+
+  it('renders all sizes', () => {
+    const sizes = ['sm', 'md', 'lg'] as const;
+    sizes.forEach((size) => {
+      const { container } = render(<Button size={size}>{size}</Button>);
+      expect(container.firstChild).toBeInTheDocument();
+    });
+  });
+
+  it('shows spinner and aria-busy when loading', () => {
+    render(<Button isLoading>Loading</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button.querySelector('.animate-spin')).toBeInTheDocument();
+  });
 });

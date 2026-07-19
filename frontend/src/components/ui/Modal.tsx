@@ -1,4 +1,4 @@
-import { useEffect, useCallback, type ReactNode } from 'react';
+import { useEffect, useCallback, useRef, useId, type ReactNode } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,6 +9,9 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -20,6 +23,8 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
+      // Move focus into the dialog when it opens
+      dialogRef.current?.focus();
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -34,9 +39,16 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       {/* Content */}
-      <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto outline-none"
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"

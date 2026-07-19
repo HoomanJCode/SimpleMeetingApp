@@ -14,10 +14,14 @@ type FieldProps = InputFieldProps | TextareaFieldProps;
 export function Input(props: FieldProps) {
   const { label, error, helperText, as, className = '', ...rest } = props;
   const id = useId();
+  const errorId = useId();
+  const helperId = useId();
 
   const baseClasses =
     'w-full border rounded-lg px-4 py-2.5 transition outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300';
+
+  const describedBy = [error && errorId, helperText && helperId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div className="space-y-1">
@@ -29,18 +33,22 @@ export function Input(props: FieldProps) {
       {as === 'textarea' ? (
         <textarea
           id={id}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
           className={`${baseClasses} ${errorClasses} resize-y ${className}`}
           {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       ) : (
         <input
           id={id}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
           className={`${baseClasses} ${errorClasses} ${className}`}
           {...(rest as InputHTMLAttributes<HTMLInputElement>)}
         />
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {helperText && !error && <p className="text-sm text-gray-500">{helperText}</p>}
+      {error && <p id={errorId} className="text-sm text-red-600">{error}</p>}
+      {helperText && !error && <p id={helperId} className="text-sm text-gray-500">{helperText}</p>}
     </div>
   );
 }
