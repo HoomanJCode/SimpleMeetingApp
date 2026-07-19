@@ -45,8 +45,8 @@ export function createApp() {
   // Routes
   app.use('/api', routes);
 
-  // 404 handler
-  app.use('/api/*', notFoundHandler);
+  // 404 handler for any unmatched /api route
+  app.use('/api', notFoundHandler);
 
   // Global error handler
   app.use(errorHandler);
