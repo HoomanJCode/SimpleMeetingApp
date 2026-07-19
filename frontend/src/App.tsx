@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { Layout } from './components/layout/Layout';
+import { Spinner } from './components/ui/Spinner';
 import { HomePage } from './pages/HomePage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
@@ -30,13 +31,6 @@ function App() {
         </Suspense>
       </Layout>
     </AuthProvider>
-  );
-}
-
-// Inline spinner for Suspense fallback
-function Spinner({ size }: { size: 'sm' | 'lg' }) {
-  return (
-    <div className={`animate-spin rounded-full border-4 border-gray-200 border-t-primary-600 ${size === 'lg' ? 'h-12 w-12' : 'h-5 w-5'}`} />
   );
 }
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import type { User, AuthTokens } from '../types';
-import { getCurrentUser, refreshToken as apiRefreshToken } from '../api/auth';
+import { getCurrentUser } from '../api/auth';
+import { configureApiClient } from '../api/client';
 
 interface AuthState {
   user: User | null;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const getToken = useCallback(() => accessToken, []);
+  const getRefreshToken = useCallback(() => refreshTokenValue, []);
 
   const setTokens = useCallback((tokens: AuthTokens) => {
     accessToken = tokens.accessToken;
@@ -39,13 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/';
   }, []);
 
-  // On mount, check if we have a stored refresh token and try to restore session
+  // Wire API client and restore session (must be a single effect to guarantee order)
   useEffect(() => {
+    configureApiClient(getToken, getRefreshToken, setTokens, logout);
+
     const restoreSession = async () => {
       try {
-        if (refreshTokenValue) {
-          const tokens = await apiRefreshToken(refreshTokenValue);
-          setTokens(tokens);
+        const stored = getRefreshToken();
+        if (stored) {
           const currentUser = await getCurrentUser();
           setUser(currentUser);
         }
@@ -58,21 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check URL for OAuth callback tokens
-    const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
-    const refreshParam = params.get('refreshToken');
-
-    if (tokenParam && refreshParam) {
-      setTokens({ accessToken: tokenParam, refreshToken: refreshParam });
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
-      // Fetch user
-      getCurrentUser().then(setUser).catch(() => {}).finally(() => setIsLoading(false));
-    } else {
-      restoreSession();
-    }
-  }, [setTokens]);
+    restoreSession();
+  }, [getToken, getRefreshToken, setTokens, logout]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, getToken, setTokens }}>

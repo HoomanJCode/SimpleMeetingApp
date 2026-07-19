@@ -3,10 +3,20 @@ import type { ApiError } from '../types';
 const BASE_URL = '/api';
 
 let getTokenFn: (() => string | null) | null = null;
+let getRefreshTokenFn: (() => string | null) | null = null;
+let setTokensFn: ((tokens: { accessToken: string; refreshToken: string }) => void) | null = null;
 let onUnauthorized: (() => void) | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
-export function configureApiClient(getToken: () => string | null, onAuthError: () => void) {
+export function configureApiClient(
+  getToken: () => string | null,
+  getRefreshToken: () => string | null,
+  setTokens: (tokens: { accessToken: string; refreshToken: string }) => void,
+  onAuthError: () => void
+) {
   getTokenFn = getToken;
+  getRefreshTokenFn = getRefreshToken;
+  setTokensFn = setTokens;
   onUnauthorized = onAuthError;
 }
 
@@ -17,7 +27,32 @@ class ApiClientError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const stored = getRefreshTokenFn?.();
+        if (!stored) return false;
+        const res = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: stored }),
+        });
+        if (!res.ok) return false;
+        const tokens = await res.json();
+        setTokensFn?.(tokens);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
+async function request<T>(method: string, path: string, body?: unknown, isRetry = false): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -37,10 +72,18 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     return undefined as T;
   }
 
-  if (!res.ok) {
-    if (res.status === 401 && onUnauthorized) {
-      onUnauthorized();
+  // Token expired — try refresh once
+  if (res.status === 401 && !isRetry && token) {
+    const refreshed = await attemptTokenRefresh();
+    if (refreshed) {
+      return request<T>(method, path, body, true);
     }
+    onUnauthorized?.();
+    const errorData = await res.json().catch(() => ({}));
+    throw new ApiClientError(res.status, errorData as ApiError);
+  }
+
+  if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new ApiClientError(res.status, errorData as ApiError);
   }
