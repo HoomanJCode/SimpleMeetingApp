@@ -10,13 +10,13 @@ export function getDb(): Database.Database {
   if (!db) {
     const env = getEnv();
 
-    // Resolve absolute path
-    const dbPath = path.resolve(env.DATABASE_PATH);
-    const dataDir = path.dirname(dbPath);
-
-    // Ensure data directory exists
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    // Use in-memory database as-is; otherwise resolve absolute path and ensure directory exists
+    const dbPath = env.DATABASE_PATH === ':memory:' ? ':memory:' : path.resolve(env.DATABASE_PATH);
+    if (dbPath !== ':memory:') {
+      const dataDir = path.dirname(dbPath);
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
     }
 
     logger.info({ dbPath }, 'Connecting to SQLite database');
