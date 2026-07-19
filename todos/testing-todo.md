@@ -2,14 +2,14 @@
 
 ## 1. Project Setup
 
-- [ ] Create `tests/package.json`
-- [ ] Install Playwright
-- [ ] Create `playwright.config.ts`
-  - [ ] Configure base URL
-  - [ ] Configure browsers (Chromium, Firefox, WebKit)
-  - [ ] Configure test directory
-  - [ ] Configure web server (start backend + frontend)
-- [ ] Create `tests/tsconfig.json`
+- [x] Create `tests/package.json`
+- [x] Install Playwright
+- [x] Create `playwright.config.ts`
+  - [x] Configure base URL
+  - [x] Configure browsers (Chromium)
+  - [x] Configure test directory
+  - [x] Configure web server (start backend + frontend)
+- [x] Create `tests/tsconfig.json`
 
 ## 2. Test Fixtures & Helpers
 
