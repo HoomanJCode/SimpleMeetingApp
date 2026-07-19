@@ -46,6 +46,9 @@ export function createWebSocketServer(httpServer: HttpServer): Server {
   io.on('connection', (socket: Socket) => {
     logger.info({ socketId: socket.id }, 'WebSocket client connected');
 
+    // Join global room for meeting creation/deletion events
+    socket.join('global');
+
     // Subscribe to meeting room
     socket.on('meeting:subscribe', ({ meetingId }: { meetingId: string }) => {
       if (meetingId) {
