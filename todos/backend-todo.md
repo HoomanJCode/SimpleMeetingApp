@@ -104,28 +104,28 @@
 
 ## 6. Meeting CRUD
 
-- [ ] Create `src/services/meetingService.ts`
-  - [ ] `createMeeting(data, hostId)` — create meeting
-  - [ ] `getMeetings(filters, pagination)` — list meetings
-  - [ ] `getMeetingById(id, userId?)` — get with optional join status
-  - [ ] `updateMeeting(id, userId, data)` — host-only update
-  - [ ] `deleteMeeting(id, userId)` — host-only delete
-  - [ ] `joinMeeting(id, userId)` — add participant
-  - [ ] `leaveMeeting(id, userId)` — remove participant
-  - [ ] `getUserMeetings(userId)` — user's meetings
-- [ ] Create Zod validation schemas
-  - [ ] `createMeetingSchema`
-  - [ ] `updateMeetingSchema`
-  - [ ] `meetingQuerySchema`
-- [ ] Create `src/routes/meeting.routes.ts`
-  - [ ] `GET /meetings` (public, optional auth)
-  - [ ] `POST /meetings` (protected)
-  - [ ] `GET /meetings/:id` (public, optional auth)
-  - [ ] `PUT /meetings/:id` (protected, host-only)
-  - [ ] `DELETE /meetings/:id` (protected, host-only)
-  - [ ] `POST /meetings/:id/join` (protected)
-  - [ ] `POST /meetings/:id/leave` (protected)
-  - [ ] `GET /users/me/meetings` (protected)
+- [x] Create `src/services/meetingService.ts`
+  - [x] `createMeeting(data, hostId)` — create meeting
+  - [x] `getMeetings(filters, pagination)` — list meetings
+  - [x] `getMeetingById(id, userId?)` — get with optional join status
+  - [x] `updateMeeting(id, userId, data)` — host-only update
+  - [x] `deleteMeeting(id, userId)` — host-only delete
+  - [x] `joinMeeting(id, userId)` — add participant
+  - [x] `leaveMeeting(id, userId)` — remove participant
+  - [x] `getUserMeetings(userId)` — user's meetings
+- [x] Create Zod validation schemas
+  - [x] `createMeetingSchema`
+  - [x] `updateMeetingSchema`
+  - [x] `meetingQuerySchema`
+- [x] Create `src/routes/meeting.routes.ts`
+  - [x] `GET /meetings` (public, optional auth)
+  - [x] `POST /meetings` (protected)
+  - [x] `GET /meetings/:id` (public, optional auth)
+  - [x] `PUT /meetings/:id` (protected, host-only)
+  - [x] `DELETE /meetings/:id` (protected, host-only)
+  - [x] `POST /meetings/:id/join` (protected)
+  - [x] `POST /meetings/:id/leave` (protected)
+  - [x] `GET /meetings/my` (protected)
 
 ## 7. WebSocket
 
