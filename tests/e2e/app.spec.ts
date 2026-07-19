@@ -25,8 +25,8 @@ test.describe('Authentication', () => {
 
   test('protected routes redirect to home', async ({ page }) => {
     await page.goto('/meetings/new');
-    // Should redirect back to home
-    await expect(page).toHaveURL('/');
+    // Wait for React Router redirect to complete
+    await page.waitForURL('/');
   });
 });
 
