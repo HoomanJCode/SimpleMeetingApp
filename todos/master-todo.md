@@ -141,7 +141,7 @@ This document tracks the overall project delivery milestones.
   - [x] Auth flow tests (happy + error paths) _(partially via `backend/src/services/authService.test.ts`; full OAuth round-trip via `tests/`)_
   - [x] Meeting CRUD tests
   - [x] Join/Leave tests
-  - [ ] WebSocket event tests _(pending)_
+  - [x] WebSocket event tests
   - [x] Validation error tests
   - [x] Rate limiter tests
 
@@ -167,7 +167,7 @@ This document tracks the overall project delivery milestones.
   - [x] Helmet security headers
   - [x] CORS configuration for production
   - [x] Rate limiting tuned for production
-  - [ ] Backend serves frontend static build _(pending)_
+  - [x] Backend serves frontend static build
   - [x] Compress responses (compression middleware)
 
 - [x] **8.2** Documentation

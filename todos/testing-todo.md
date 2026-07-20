@@ -105,13 +105,13 @@
   - [ ] POST /meetings/:id/join (full) → 409
   - [ ] POST /meetings/:id/leave → 200
   - [ ] POST /meetings/:id/leave (not participant) → 409
-- [ ] `backend/tests/websocket.test.ts`
-  - [ ] Connecting with valid token works
-  - [ ] Subscribing to meeting room works
-  - [ ] participant:joined event emitted on join
-  - [ ] participant:left event emitted on leave
-  - [ ] meeting:updated event emitted on update
-  - [ ] meeting:deleted event emitted on delete
+- [x] `backend/src/websocket/websocket.test.ts`
+  - [x] Connecting with valid token works
+  - [x] Subscribing to meeting room works
+  - [x] participant:joined event emitted on join
+  - [x] participant:left event emitted on leave
+  - [x] meeting:updated event emitted on update
+  - [x] meeting:deleted event emitted on delete
 
 ## 8. Frontend Unit Tests (Vitest)
 
@@ -128,10 +128,10 @@
   - [ ] Opens when trigger is clicked
   - [ ] Closes on backdrop click
   - [ ] Closes on Escape key
-- [ ] `frontend/src/components/meeting/__tests__/MeetingCard.test.tsx`
-  - [ ] Renders meeting data correctly
-  - [ ] Shows participant count
-  - [ ] Shows status badge
+- [x] `frontend/src/components/meeting/__tests__/MeetingCard.test.tsx`
+  - [x] Renders meeting data correctly
+  - [x] Shows participant count
+  - [x] Shows status badge
 - [x] `frontend/src/hooks/__tests__/useRealtime.test.ts`
   - [x] Connects to WebSocket
   - [x] Falls back to polling on disconnect/connect_error

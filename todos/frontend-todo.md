@@ -211,6 +211,7 @@
   - [x] Button variants and states
   - [x] Input validation display
   - [x] Modal open/close behavior
+  - [x] MeetingCard rendering
 - [x] Hook tests
   - [x] useAuth behavior (AuthContext)
   - [x] useRealtime connection states
