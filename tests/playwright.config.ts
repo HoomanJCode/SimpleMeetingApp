@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
 
 export default defineConfig({
   testDir: './e2e',
@@ -34,10 +35,10 @@ export default defineConfig({
   // (login + reset) are mounted for seeding and DB isolation.
   webServer: [
     {
-      command: 'cd ../backend && npm run dev',
+      command: 'npm run dev',
       port: 3001,
       reuseExistingServer: !process.env.CI,
-      cwd: __dirname,
+      cwd: path.resolve(__dirname, '../backend'),
       env: {
         ...process.env,
         ENABLE_TEST_ROUTES: '1',
@@ -49,13 +50,17 @@ export default defineConfig({
         GOOGLE_REDIRECT_URI: 'http://localhost:3001/api/auth/google/callback',
         JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
         FRONTEND_URL: 'http://localhost:5173',
+        // Bind to the IPv4 loopback so Playwright's port probe (which uses
+        // 127.0.0.1) can reliably connect on Windows. 'localhost' can resolve
+        // to ::1, causing the readiness check to time out.
+        HOST: '127.0.0.1',
       },
     },
     {
-      command: 'cd ../frontend && npm run dev',
+      command: 'npm run dev',
       port: 5173,
       reuseExistingServer: !process.env.CI,
-      cwd: __dirname,
+      cwd: path.resolve(__dirname, '../frontend'),
     },
   ],
 });
