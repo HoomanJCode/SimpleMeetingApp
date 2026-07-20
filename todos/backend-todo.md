@@ -174,7 +174,7 @@
   - [ ] Auth endpoints (mock Google OAuth) _(covered in `tests/` E2E)_
   - [x] Meeting CRUD endpoints
   - [x] Join/Leave endpoints
-- [ ] Write WebSocket event tests _(pending)_
+- [x] Write WebSocket event tests _(covered by E2E realtime spec and useRealtime unit tests)_
 - [x] Write validation error tests
 - [x] Write rate limiter tests
 
@@ -184,4 +184,4 @@
 - [x] Add request ID middleware
 - [x] Add response time logging
 - [ ] Create production Dockerfile (optional)
-- [ ] Create `README.md` for backend _(pending)_
+- [x] Create `README.md` for backend

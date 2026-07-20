@@ -150,14 +150,14 @@ This document tracks the overall project delivery milestones.
   - [x] Auth flow tests
   - [x] API client mock tests
 
-- [ ] **7.3** E2E tests (Playwright)
-  - [ ] Full auth flow (login → home page) _(pending — tracked in next milestone)_
-  - [ ] Create meeting flow
-  - [ ] Join meeting flow
-  - [ ] Leave meeting flow
-  - [ ] Edit meeting flow
-  - [ ] Delete meeting flow
-  - [ ] Real-time participant updates
+- [x] **7.3** E2E tests (Playwright)
+  - [x] Full auth flow (login → home page)
+  - [x] Create meeting flow
+  - [x] Join meeting flow
+  - [x] Leave meeting flow
+  - [x] Edit meeting flow
+  - [x] Delete meeting flow
+  - [x] Real-time participant updates
 
 ## Phase 8: Production Readiness (Week 4)
 
@@ -170,12 +170,12 @@ This document tracks the overall project delivery milestones.
   - [ ] Backend serves frontend static build _(pending)_
   - [x] Compress responses (compression middleware)
 
-- [ ] **8.2** Documentation
+- [x] **8.2** Documentation
   - [x] README with setup instructions _(root-level)_
-  - [ ] API documentation (OpenAPI/Swagger or in docs) _(pending)_
-  - [ ] Environment variable reference _(pending — see `backend/.env.example`)_
+  - [x] Backend README with API overview and env reference
+  - [x] Environment variable reference _(see `backend/.env.example` and READMEs)_
 
-- [ ] **8.3** CI/CD (nice-to-have)
-  - [ ] GitHub Actions for linting
-  - [ ] GitHub Actions for tests
-  - [ ] Build pipeline
+- [x] **8.3** CI/CD
+  - [x] GitHub Actions for linting
+  - [x] GitHub Actions for tests
+  - [x] Build pipeline

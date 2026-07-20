@@ -213,6 +213,6 @@
   - [x] Modal open/close behavior
 - [x] Hook tests
   - [x] useAuth behavior (AuthContext)
-  - [ ] useRealtime connection states _(pending — tracked in next milestone)_
+  - [x] useRealtime connection states
 - [x] Page smoke tests (via `tests/e2e/app.spec.ts`)
 - [x] Mock API client for isolated tests
