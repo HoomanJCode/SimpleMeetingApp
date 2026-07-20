@@ -41,6 +41,14 @@ export default defineConfig({
       env: {
         ...process.env,
         ENABLE_TEST_ROUTES: '1',
+        // Dummy values are enough for E2E tests: the Google OAuth flow is
+        // bypassed entirely via /api/test/login. The backend still validates
+        // that these variables are present, so we provide them here.
+        GOOGLE_CLIENT_ID: 'test-google-client-id',
+        GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
+        GOOGLE_REDIRECT_URI: 'http://localhost:3001/api/auth/google/callback',
+        JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
+        FRONTEND_URL: 'http://localhost:5173',
       },
     },
     {

@@ -47,8 +47,9 @@ export function MeetingForm({
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Title *</label>
+        <label htmlFor="meeting-title" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Title *</label>
         <input
+          id="meeting-title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -61,8 +62,9 @@ export function MeetingForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description *</label>
+        <label htmlFor="meeting-description" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description *</label>
         <textarea
+          id="meeting-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
@@ -76,8 +78,9 @@ export function MeetingForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date & Time *</label>
+          <label htmlFor="meeting-datetime" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date & Time *</label>
           <input
+            id="meeting-datetime"
             type="datetime-local"
             value={dateTime}
             onChange={(e) => setDateTime(e.target.value)}
@@ -87,13 +90,13 @@ export function MeetingForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Capacity *</label>
+          <label htmlFor="meeting-capacity" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Capacity *</label>
           <input
+            id="meeting-capacity"
             type="number"
             value={capacity}
             onChange={(e) => setCapacity(parseInt(e.target.value) || 2)}
             required
-            min={2}
             max={10000}
             className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           />
@@ -101,8 +104,9 @@ export function MeetingForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Location *</label>
+        <label htmlFor="meeting-location" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Location *</label>
         <input
+          id="meeting-location"
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
