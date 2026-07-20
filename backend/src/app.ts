@@ -2,7 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import path from 'path';
+import fs from 'fs';
 import { getEnv } from './config/env';
+import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { generalLimiter } from './middleware/rateLimiter';
@@ -47,6 +50,21 @@ export function createApp() {
 
   // 404 handler for any unmatched /api route
   app.use('/api', notFoundHandler);
+
+  // Serve frontend static build in production
+  if (env.NODE_ENV === 'production') {
+    const buildPath = path.resolve(env.FRONTEND_BUILD_PATH);
+    if (fs.existsSync(buildPath)) {
+      app.use(express.static(buildPath));
+
+      // SPA catch-all: serve index.html for any non-API route
+      app.get('*', (_req, res) => {
+        res.sendFile(path.join(buildPath, 'index.html'));
+      });
+    } else {
+      logger.warn({ buildPath }, 'Frontend build path does not exist; static files will not be served');
+    }
+  }
 
   // Global error handler
   app.use(errorHandler);
