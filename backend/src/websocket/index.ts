@@ -50,10 +50,13 @@ export function createWebSocketServer(httpServer: HttpServer): Server {
     socket.join('global');
 
     // Subscribe to meeting room
-    socket.on('meeting:subscribe', ({ meetingId }: { meetingId: string }) => {
+    socket.on('meeting:subscribe', ({ meetingId }: { meetingId: string }, callback?: () => void) => {
       if (meetingId) {
         socket.join(`meeting:${meetingId}`);
         logger.debug({ socketId: socket.id, meetingId }, 'Client subscribed to meeting');
+        if (typeof callback === 'function') {
+          callback();
+        }
       }
     });
 
