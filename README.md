@@ -103,7 +103,7 @@ Navigate to [http://localhost:5173](http://localhost:5173) and sign in with Goog
 
 ```bash
 cd backend
-npm test                # 53+ tests (auth, meetings, validation, rate limiting)
+npm test                # 84+ tests (auth, meetings, validation, rate limiting, WebSocket)
 npm run test:watch      # Watch mode
 ```
 
@@ -111,7 +111,7 @@ npm run test:watch      # Watch mode
 
 ```bash
 cd frontend
-npm test                # 39+ tests (components, hooks, auth context)
+npm test                # 52+ tests (components, hooks, auth context)
 npm run test:watch      # Watch mode
 ```
 

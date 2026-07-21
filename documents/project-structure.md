@@ -125,10 +125,10 @@ IrMeetingApp/
 │   └── project-structure.md
 │
 ├── todos/                    # Implementation task lists
-│   ├── master-todo.md
-│   ├── backend-todo.md
-│   ├── frontend-todo.md
-│   └── testing-todo.md
+│   ├── master-todo-passed.md
+│   ├── backend-todo-passed.md
+│   ├── frontend-todo-passed.md
+│   └── testing-todo-passed.md
 │
 ├── .gitignore
 └── README.md
