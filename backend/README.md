@@ -150,7 +150,7 @@ npm run test:watch
 npm run lint
 ```
 
-The backend has 53+ tests covering auth service, meeting service, API endpoints (via Supertest), validation, and rate limiting.
+The backend has 84+ tests covering auth service, meeting service, API endpoints (via Supertest), validation, rate limiting, WebSocket events, and integration tests under `backend/tests/`.
 
 ## License
 

@@ -11,8 +11,8 @@ A real-time Meetup-like web application for creating and joining tech meetings. 
 | Realtime       | Socket.IO (WebSocket with polling fallback)  |
 | Auth           | Google OAuth 2.0 + JWT access/refresh tokens |
 | Frontend       | React 18, Vite, TypeScript, Tailwind CSS     |
-| Backend Tests  | Vitest + Supertest (53+ tests)               |
-| Frontend Tests | Vitest + Testing Library (39+ tests)         |
+| Backend Tests  | Vitest + Supertest (84+ tests)               |
+| Frontend Tests | Vitest + Testing Library (52+ tests)         |
 | E2E Tests      | Playwright (Chromium)                        |
 
 ## Project Structure
@@ -193,10 +193,10 @@ See [Backend README](backend/README.md) for the full API reference and WebSocket
 
 ## Implementation Plan
 
-- [Master Todo](todos/master-todo.md)
-- [Backend Todo](todos/backend-todo.md)
-- [Frontend Todo](todos/frontend-todo.md)
-- [Testing Todo](todos/testing-todo.md)
+- [Master Todo](todos/master-todo-passed.md)
+- [Backend Todo](todos/backend-todo-passed.md)
+- [Frontend Todo](todos/frontend-todo-passed.md)
+- [Testing Todo](todos/testing-todo-passed.md)
 
 ## License
 
