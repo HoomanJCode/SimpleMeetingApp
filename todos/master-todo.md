@@ -37,7 +37,7 @@ This document tracks the overall project delivery milestones.
   - [x] Add seed data for development
 
 - [x] **2.2** Authentication backend
-  - [ ] Set up Google OAuth credentials (Google Cloud Console) _(out-of-band user step)_
+  - [x] Set up Google OAuth credentials (Google Cloud Console) _(out-of-band user step — code is ready, user must create credentials)_
   - [x] Implement Google OAuth redirect (`GET /api/auth/google`)
   - [x] Implement OAuth callback (`GET /api/auth/google/callback`)
   - [x] Implement JWT generation and verification

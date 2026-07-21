@@ -20,7 +20,7 @@
 - [x] Create `src/index.ts` — server entry point
   - [x] Import and validate env vars
   - [x] Create HTTP server
-  - [ ] Initialize WebSocket server (deferred to Section 7)
+  - [x] Initialize WebSocket server (implemented in Section 7)
   - [x] Start listening on configured port
   - [x] Handle graceful shutdown (SIGTERM/SIGINT)
 - [x] Create `src/app.ts` — Express app
