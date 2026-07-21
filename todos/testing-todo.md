@@ -78,33 +78,33 @@
 
 ## 7. Backend Integration Tests (Vitest)
 
-- [ ] `backend/tests/health.test.ts`
-  - [ ] Health endpoint returns 200
-  - [ ] Response includes timestamp and uptime
-- [ ] `backend/tests/auth.test.ts`
-  - [ ] POST /auth/refresh with valid token → 200
-  - [ ] POST /auth/refresh with invalid token → 401
-  - [ ] POST /auth/refresh with expired token → 401
-  - [ ] GET /auth/me with valid JWT → 200 + user data
-  - [ ] GET /auth/me without JWT → 401
-- [ ] `backend/tests/meetings.test.ts`
-  - [ ] GET /meetings → 200, paginated list
-  - [ ] GET /meetings with search → filtered results
-  - [ ] POST /meetings (authenticated) → 201
-  - [ ] POST /meetings (unauthenticated) → 401
-  - [ ] POST /meetings with invalid data → 400
-  - [ ] GET /meetings/:id → 200
-  - [ ] GET /meetings/:id (non-existent) → 404
-  - [ ] PUT /meetings/:id (host) → 200
-  - [ ] PUT /meetings/:id (non-host) → 403
-  - [ ] DELETE /meetings/:id (host) → 204
-  - [ ] DELETE /meetings/:id (non-host) → 403
-- [ ] `backend/tests/participants.test.ts`
-  - [ ] POST /meetings/:id/join → 200
-  - [ ] POST /meetings/:id/join (already joined) → 409
-  - [ ] POST /meetings/:id/join (full) → 409
-  - [ ] POST /meetings/:id/leave → 200
-  - [ ] POST /meetings/:id/leave (not participant) → 409
+- [x] `backend/tests/health.test.ts`
+  - [x] Health endpoint returns 200
+  - [x] Response includes timestamp and uptime
+- [x] `backend/tests/auth.test.ts`
+  - [x] POST /auth/refresh with valid token → 200
+  - [x] POST /auth/refresh with invalid token → 401
+  - [x] POST /auth/refresh with expired token → 401
+  - [x] GET /auth/me with valid JWT → 200 + user data
+  - [x] GET /auth/me without JWT → 401
+- [x] `backend/tests/meetings.test.ts`
+  - [x] GET /meetings → 200, paginated list
+  - [x] GET /meetings with search → filtered results
+  - [x] POST /meetings (authenticated) → 201
+  - [x] POST /meetings (unauthenticated) → 401
+  - [x] POST /meetings with invalid data → 400
+  - [x] GET /meetings/:id → 200
+  - [x] GET /meetings/:id (non-existent) → 404
+  - [x] PUT /meetings/:id (host) → 200
+  - [x] PUT /meetings/:id (non-host) → 403
+  - [x] DELETE /meetings/:id (host) → 204
+  - [x] DELETE /meetings/:id (non-host) → 403
+- [x] `backend/tests/participants.test.ts`
+  - [x] POST /meetings/:id/join → 200
+  - [x] POST /meetings/:id/join (already joined) → 409
+  - [x] POST /meetings/:id/join (full) → 409
+  - [x] POST /meetings/:id/leave → 200
+  - [x] POST /meetings/:id/leave (not participant) → 409
 - [x] `backend/src/websocket/websocket.test.ts`
   - [x] Connecting with valid token works
   - [x] Subscribing to meeting room works
@@ -115,19 +115,19 @@
 
 ## 8. Frontend Unit Tests (Vitest)
 
-- [ ] `frontend/src/components/ui/__tests__/Button.test.tsx`
-  - [ ] Renders all variants
-  - [ ] Handles click events
-  - [ ] Shows loading state
-  - [ ] Disabled prevents click
-- [ ] `frontend/src/components/ui/__tests__/Input.test.tsx`
-  - [ ] Renders with label
-  - [ ] Shows error message
-  - [ ] Handles user input
-- [ ] `frontend/src/components/ui/__tests__/Modal.test.tsx`
-  - [ ] Opens when trigger is clicked
-  - [ ] Closes on backdrop click
-  - [ ] Closes on Escape key
+- [x] `frontend/src/components/ui/__tests__/Button.test.tsx`
+  - [x] Renders all variants
+  - [x] Handles click events
+  - [x] Shows loading state
+  - [x] Disabled prevents click
+- [x] `frontend/src/components/ui/__tests__/Input.test.tsx`
+  - [x] Renders with label
+  - [x] Shows error message
+  - [x] Handles user input
+- [x] `frontend/src/components/ui/__tests__/Modal.test.tsx`
+  - [x] Opens when trigger is clicked
+  - [x] Closes on backdrop click
+  - [x] Closes on Escape key
 - [x] `frontend/src/components/meeting/__tests__/MeetingCard.test.tsx`
   - [x] Renders meeting data correctly
   - [x] Shows participant count

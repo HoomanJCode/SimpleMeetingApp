@@ -23,7 +23,7 @@ This document tracks the overall project delivery milestones.
 - [x] **1.3** Set up tests project
   - [x] Initialize Playwright
   - [x] Create `playwright.config.ts`
-  - [ ] Create test fixtures and helpers _(pending — tracked in next milestone)_
+  - [x] Create test fixtures and helpers
 
 ## Phase 2: Database & Auth (Week 1-2)
 

@@ -171,7 +171,7 @@
 - [x] Write meeting service tests
 - [x] Write API endpoint tests (supertest)
   - [x] Health endpoint
-  - [ ] Auth endpoints (mock Google OAuth) _(covered in `tests/` E2E)_
+  - [x] Auth endpoints (mock Google OAuth) _(covered in `tests/` E2E and `backend/tests/auth.test.ts`)_
   - [x] Meeting CRUD endpoints
   - [x] Join/Leave endpoints
 - [x] Write WebSocket event tests
