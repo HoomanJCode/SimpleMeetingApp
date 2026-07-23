@@ -42,8 +42,13 @@ export function createApp() {
   // Body parsing
   app.use(express.json({ limit: '1mb' }));
 
-  // Rate limiting
-  app.use(generalLimiter);
+  // Rate limiting — skip test routes to avoid throttling E2E DB resets
+  app.use((req, res, next) => {
+    if (process.env.ENABLE_TEST_ROUTES === '1' && req.path.startsWith('/api/test/')) {
+      return next();
+    }
+    generalLimiter(req, res, next);
+  });
 
   // Routes
   app.use('/api', routes);

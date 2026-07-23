@@ -18,7 +18,7 @@ export default defineConfig({
   timeout: 30_000,
 
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -26,40 +26,40 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Use system Chrome instead of Playwright's bundled Chromium.
+        // Required when the Playwright CDN is geo-restricted (403).
+        channel: 'chrome',
+      },
     },
   ],
 
-  // Start both backend and frontend before tests.
-  // ENABLE_TEST_ROUTES=1 is required so the dev-only /api/test/* endpoints
-  // (login + reset) are mounted for seeding and DB isolation.
+  // Auto-start backend + frontend. Both bind to 127.0.0.1 to avoid
+  // IPv4/IPv6 mismatches on Windows (Node 17+ resolves localhost → ::1).
   webServer: [
     {
       command: 'npm run dev',
-      port: 3001,
+      url: 'http://127.0.0.1:3001/api/health',
       reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
       cwd: path.resolve(__dirname, '../backend'),
       env: {
         ...process.env,
         ENABLE_TEST_ROUTES: '1',
-        // Dummy values are enough for E2E tests: the Google OAuth flow is
-        // bypassed entirely via /api/test/login. The backend still validates
-        // that these variables are present, so we provide them here.
         GOOGLE_CLIENT_ID: 'test-google-client-id',
         GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
         GOOGLE_REDIRECT_URI: 'http://localhost:3001/api/auth/google/callback',
         JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
-        FRONTEND_URL: 'http://localhost:5173',
-        // Bind to the IPv4 loopback so Playwright's port probe (which uses
-        // 127.0.0.1) can reliably connect on Windows. 'localhost' can resolve
-        // to ::1, causing the readiness check to time out.
+        FRONTEND_URL: 'http://127.0.0.1:5173',
         HOST: '127.0.0.1',
       },
     },
     {
-      command: 'npm run dev',
-      port: 5173,
+      command: 'npm run dev -- --host 127.0.0.1',
+      url: 'http://127.0.0.1:5173',
       reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
       cwd: path.resolve(__dirname, '../frontend'),
     },
   ],

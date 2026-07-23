@@ -3,8 +3,8 @@
  * must be started with ENABLE_TEST_ROUTES=1 (see tests/playwright.config.ts).
  */
 
-export const BACKEND_URL = 'http://localhost:3001';
-export const FRONTEND_URL = 'http://localhost:5173';
+export const BACKEND_URL = 'http://127.0.0.1:3001';
+export const FRONTEND_URL = 'http://127.0.0.1:5173';
 
 interface RawTokens {
   accessToken: string;

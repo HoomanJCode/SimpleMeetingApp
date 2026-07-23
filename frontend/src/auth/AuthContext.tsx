@@ -15,9 +15,25 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-// In-memory token storage (never localStorage for security)
-let accessToken: string | null = null;
-let refreshTokenValue: string | null = null;
+// In-memory token storage + sessionStorage fallback for page reloads.
+// sessionStorage is per-tab and cleared when the tab closes — safer than
+// localStorage for persisting across page reloads without surviving sessions.
+// It also allows E2E tests to survive page.goto() full-page reloads.
+let accessToken: string | null = sessionStorage.getItem('accessToken') || null;
+let refreshTokenValue: string | null = sessionStorage.getItem('refreshToken') || null;
+
+function persistTokens(access: string | null, refresh: string | null) {
+  if (access) {
+    sessionStorage.setItem('accessToken', access);
+  } else {
+    sessionStorage.removeItem('accessToken');
+  }
+  if (refresh) {
+    sessionStorage.setItem('refreshToken', refresh);
+  } else {
+    sessionStorage.removeItem('refreshToken');
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setTokens = useCallback((tokens: AuthTokens) => {
     accessToken = tokens.accessToken;
     refreshTokenValue = tokens.refreshToken;
+    persistTokens(tokens.accessToken, tokens.refreshToken);
   }, []);
 
   /**
@@ -62,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     accessToken = null;
     refreshTokenValue = null;
+    persistTokens(null, null);
     setUser(null);
     window.location.href = '/';
   }, []);
