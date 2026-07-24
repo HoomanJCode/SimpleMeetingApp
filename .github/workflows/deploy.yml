@@ -1,0 +1,411 @@
+# .github/workflows/deploy.yml
+name: Deploy IrMeetingApp to VPS
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  PROJECT_DIR: /opt/irmeeting
+  SERVICE_NAME: irmeeting
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Job 1: Test phase (fast feedback) ──────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    name: 🧪 Test & Build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Backend — install + type-check + test
+        working-directory: backend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+        env:
+          NODE_ENV: test
+          GOOGLE_CLIENT_ID: ci-google-client-id
+          GOOGLE_CLIENT_SECRET: ci-google-client-secret
+          GOOGLE_REDIRECT_URI: http://localhost:3001/api/auth/google/callback
+          JWT_SECRET: ci-jwt-secret-at-least-32-characters-long-for-testing
+          FRONTEND_URL: http://localhost:5173
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend — install + type-check + test
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+  # ── Job 2: VPS setup (runs after tests) ───────────────────────────────
+  setup-vps:
+    runs-on: ubuntu-latest
+    name: 🔧 Setup VPS Environment
+    needs: test
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+      - run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 📦 Install system packages
+        run: |
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'apt-get update -qq && apt-get install -y -qq nginx curl git build-essential python3'
+
+      - name: 🔧 Install Node.js 20 (if missing)
+        run: |
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'command -v node >/dev/null || (curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs)'
+
+      - name: ✅ Verify tooling
+        run: |
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'node -v && npm -v && nginx -v && git --version'
+
+  # ── Job 3: Deploy (waits for both test and setup) ────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to VPS
+    needs: [test, setup-vps]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+      - run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy application
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
+          REFRESH_TOKEN_EXPIRATION: ${{ vars.REFRESH_TOKEN_EXPIRATION || '30d' }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          DOMAIN: ${{ secrets.DOMAIN || '_' }}
+          SSL_CERT_B64: ${{ secrets.SSL_CERT_B64 || '' }}
+          SSL_KEY_B64: ${{ secrets.SSL_KEY_B64 || '' }}
+        run: |
+          # Create deploy script with error handling
+          cat > /tmp/deploy_script.sh << 'SCRIPTEOF'
+          #!/bin/bash
+          set -e
+
+          PROJECT_DIR="PROJECT_DIR_PLACEHOLDER"
+          SERVICE_NAME="SERVICE_NAME_PLACEHOLDER"
+
+          echo "========================================"
+          echo "  IrMeetingApp Deployment"
+          echo "========================================"
+
+          run_with_timeout() {
+            local timeout=$1; shift
+            timeout "$timeout" "$@" || {
+              [ $? -eq 124 ] && echo "❌ Timed out: $*" && return 124
+              return $?
+            }
+          }
+
+          # ── Stop backend service if running ──────────────────────────
+          systemctl is-active --quiet "$SERVICE_NAME" && systemctl stop "$SERVICE_NAME" || true
+
+          # ── Update or clone repository ───────────────────────────────
+          if [ -d "$PROJECT_DIR/.git" ]; then
+            echo "📥 Pulling latest code..."
+            cd "$PROJECT_DIR"
+            run_with_timeout 300 git fetch origin || exit 1
+            run_with_timeout 300 git reset --hard origin/master || exit 1
+          else
+            echo "📥 Cloning repository..."
+            run_with_timeout 300 git clone --branch master https://github.com/HoomanJCode/IrMeetingApp.git "$PROJECT_DIR" || exit 1
+            cd "$PROJECT_DIR"
+          fi
+
+          # ── Create backend .env ──────────────────────────────────────
+          echo "⚙️  Creating backend .env..."
+          mkdir -p "$PROJECT_DIR/backend"
+          cat > "$PROJECT_DIR/backend/.env" << EOF
+          NODE_ENV=production
+          PORT=3001
+          HOST=127.0.0.1
+          AUTH_METHOD=AUTH_METHOD_PLACEHOLDER
+          GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID_PLACEHOLDER
+          GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET_PLACEHOLDER
+          GOOGLE_REDIRECT_URI=GOOGLE_REDIRECT_URI_PLACEHOLDER
+          JWT_SECRET=JWT_SECRET_PLACEHOLDER
+          JWT_EXPIRATION=JWT_EXPIRATION_PLACEHOLDER
+          REFRESH_TOKEN_EXPIRATION=REFRESH_TOKEN_EXPIRATION_PLACEHOLDER
+          FRONTEND_URL=FRONTEND_URL_PLACEHOLDER
+          FRONTEND_BUILD_PATH=FRONTEND_BUILD_PATH_PLACEHOLDER
+          DATABASE_PATH=DATABASE_PATH_PLACEHOLDER
+          EOF
+          chmod 600 "$PROJECT_DIR/backend/.env"
+
+          # Quick sanity: JWT_SECRET must not be empty
+          [ -z "$(grep '^JWT_SECRET=$' "$PROJECT_DIR/backend/.env" 2>/dev/null)" ] || {
+            echo "❌ JWT_SECRET is empty!"
+            exit 1
+          }
+
+          # ── Install dependencies + build backend ────────────────────
+          echo "📦 Building backend..."
+          cd "$PROJECT_DIR/backend"
+          run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
+          run_with_timeout 300 npm run build || exit 1
+
+          # ── Install dependencies + build frontend ────────────────────
+          echo "🎨 Building frontend..."
+          cd "$PROJECT_DIR/frontend"
+          run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
+          run_with_timeout 300 npm run build || exit 1
+
+          # Ensure data directory exists and is writable
+          mkdir -p "$PROJECT_DIR/data"
+          chown -R root:root "$PROJECT_DIR/data"
+
+          # ── Create systemd service for backend ───────────────────────
+          echo "🔧 Creating systemd service..."
+          cat > /etc/systemd/system/"$SERVICE_NAME".service << SERVICEEOF
+          [Unit]
+          Description=IrMeetingApp Backend — REST API + WebSocket
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=$PROJECT_DIR/backend
+          Environment=NODE_ENV=production
+          ExecStart=/usr/bin/node $PROJECT_DIR/backend/dist/index.js
+          Restart=on-failure
+          RestartSec=10
+          StandardOutput=append:/var/log/$SERVICE_NAME/backend.log
+          StandardError=append:/var/log/$SERVICE_NAME/backend_error.log
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICEEOF
+
+          mkdir -p /var/log/"$SERVICE_NAME"
+          systemctl daemon-reload && systemctl enable "$SERVICE_NAME"
+
+          # ── Setup SSL (if provided) ──────────────────────────────────
+          SSL_CERT_PATH=""
+          SSL_KEY_PATH=""
+          if [ -n "SSL_CERT_B64_PLACEHOLDER" ] && [ -n "SSL_KEY_B64_PLACEHOLDER" ]; then
+            echo "🔐 Installing SSL certificates..."
+            mkdir -p "$PROJECT_DIR/ssl"
+            echo 'SSL_CERT_B64_PLACEHOLDER' | base64 -d > "$PROJECT_DIR/ssl/fullchain.pem" || exit 1
+            echo 'SSL_KEY_B64_PLACEHOLDER' | base64 -d > "$PROJECT_DIR/ssl/privkey.pem" || exit 1
+            chmod 600 "$PROJECT_DIR/ssl/privkey.pem"
+            SSL_CERT_PATH="$PROJECT_DIR/ssl/fullchain.pem"
+            SSL_KEY_PATH="$PROJECT_DIR/ssl/privkey.pem"
+          fi
+
+          # ── Create Nginx config ──────────────────────────────────────
+          echo "🔧 Creating Nginx config..."
+          if [ -n "$SSL_CERT_PATH" ] && [ -n "$SSL_KEY_PATH" ]; then
+            cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
+          # HTTP — redirect to HTTPS
+          server {
+              listen 80;
+              server_name NGINX_SERVER_NAME;
+              return 301 https://\$host\$request_uri;
+          }
+
+          # HTTPS
+          server {
+              listen 443 ssl http2;
+              server_name NGINX_SERVER_NAME;
+
+              ssl_certificate SSL_CERT_PATH_PLACEHOLDER;
+              ssl_certificate_key SSL_KEY_PATH_PLACEHOLDER;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_ciphers HIGH:!aNULL:!MD5;
+
+              # Frontend static files
+              root $PROJECT_DIR/frontend/dist;
+              index index.html;
+
+              # Gzip
+              gzip on;
+              gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+              gzip_min_length 256;
+              gzip_vary on;
+
+              # Security headers
+              add_header X-Frame-Options "SAMEORIGIN" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+              add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+              # API proxy to backend
+              location /api {
+                  proxy_pass http://127.0.0.1:3001;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
+              }
+
+              # WebSocket proxy to backend (Socket.IO)
+              location /socket.io {
+                  proxy_pass http://127.0.0.1:3001;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+              }
+
+              # SPA catch-all: serve index.html for client-side routing
+              location / {
+                  try_files \$uri \$uri/ /index.html;
+              }
+          }
+          NGINXEOF
+            # Substitute SSL paths in nginx config
+            sed -i "s|SSL_CERT_PATH_PLACEHOLDER|$SSL_CERT_PATH|g" /etc/nginx/sites-available/"$SERVICE_NAME"
+            sed -i "s|SSL_KEY_PATH_PLACEHOLDER|$SSL_KEY_PATH|g" /etc/nginx/sites-available/"$SERVICE_NAME"
+          else
+            cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
+          server {
+              listen 80;
+              server_name NGINX_SERVER_NAME;
+
+              # Frontend static files
+              root $PROJECT_DIR/frontend/dist;
+              index index.html;
+
+              # Gzip
+              gzip on;
+              gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+              gzip_min_length 256;
+              gzip_vary on;
+
+              # Security headers
+              add_header X-Frame-Options "SAMEORIGIN" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+              # API proxy to backend
+              location /api {
+                  proxy_pass http://127.0.0.1:3001;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
+              }
+
+              # WebSocket proxy to backend (Socket.IO)
+              location /socket.io {
+                  proxy_pass http://127.0.0.1:3001;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+              }
+
+              # SPA catch-all: serve index.html for client-side routing
+              location / {
+                  try_files \$uri \$uri/ /index.html;
+              }
+          }
+          NGINXEOF
+          fi
+
+          # Enable site
+          ln -sf /etc/nginx/sites-available/"$SERVICE_NAME" /etc/nginx/sites-enabled/
+          rm -f /etc/nginx/sites-enabled/default
+
+          # Test nginx config
+          nginx -t || { echo "❌ Nginx config invalid!"; exit 1; }
+
+          # Apply nginx config
+          systemctl enable nginx
+          systemctl reload nginx || systemctl start nginx
+
+          # ── Start backend service ────────────────────────────────────
+          echo "▶️  Starting backend service..."
+          systemctl start "$SERVICE_NAME"
+          sleep 3
+
+          if systemctl is-active --quiet "$SERVICE_NAME"; then
+            echo "✅ Backend service is running!"
+            systemctl status "$SERVICE_NAME" --no-pager -l
+          else
+            echo "❌ Backend service failed!"
+            tail -20 /var/log/"$SERVICE_NAME"/backend_error.log 2>/dev/null || true
+            journalctl -u "$SERVICE_NAME" -n 20 --no-pager || true
+            exit 1
+          fi
+
+          # ── Quick health check ───────────────────────────────────────
+          echo "🏥 Running health check (retry up to 30s)..."
+          HEALTH_OK=0
+          for i in 1 2 3 4 5 6; do
+            if curl -sf --max-time 5 http://127.0.0.1:3001/api/health > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              HEALTH_OK=1
+              break
+            fi
+            echo "  Attempt $i/6 — retrying in 5s..."
+            sleep 5
+          done
+          if [ "$HEALTH_OK" -eq 0 ]; then
+            echo "⚠️  Health check failed after 6 attempts — backend may still be starting"
+            tail -20 /var/log/"$SERVICE_NAME"/backend_error.log 2>/dev/null || true
+          fi
+
+          echo "✅ Deployment Complete!"
+          SCRIPTEOF
+
+          # ── Substitute placeholders ──────────────────────────────────
+          sed -i "s|PROJECT_DIR_PLACEHOLDER|${{ env.PROJECT_DIR }}|g" /tmp/deploy_script.sh
+          sed -i "s|SERVICE_NAME_PLACEHOLDER|${{ env.SERVICE_NAME }}|g" /tmp/deploy_script.sh
+          sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|${GOOGLE_CLIENT_ID}|g" /tmp/deploy_script.sh
+          sed -i "s|GOOGLE_CLIENT_SECRET_PLACEHOLDER|${GOOGLE_CLIENT_SECRET}|g" /tmp/deploy_script.sh
+          sed -i "s|GOOGLE_REDIRECT_URI_PLACEHOLDER|${GOOGLE_REDIRECT_URI}|g" /tmp/deploy_script.sh
+          sed -i "s|JWT_SECRET_PLACEHOLDER|${JWT_SECRET}|g" /tmp/deploy_script.sh
+          sed -i "s|JWT_EXPIRATION_PLACEHOLDER|${JWT_EXPIRATION}|g" /tmp/deploy_script.sh
+          sed -i "s|REFRESH_TOKEN_EXPIRATION_PLACEHOLDER|${REFRESH_TOKEN_EXPIRATION}|g" /tmp/deploy_script.sh
+          sed -i "s|FRONTEND_URL_PLACEHOLDER|${FRONTEND_URL}|g" /tmp/deploy_script.sh
+          sed -i "s|FRONTEND_BUILD_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/frontend/dist|g" /tmp/deploy_script.sh
+          sed -i "s|DATABASE_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/data/irmeeting.db|g" /tmp/deploy_script.sh
+          sed -i "s|AUTH_METHOD_PLACEHOLDER|google|g" /tmp/deploy_script.sh
+          sed -i "s|SSL_CERT_B64_PLACEHOLDER|${SSL_CERT_B64}|g" /tmp/deploy_script.sh
+          sed -i "s|SSL_KEY_B64_PLACEHOLDER|${SSL_KEY_B64}|g" /tmp/deploy_script.sh
+          sed -i "s|NGINX_SERVER_NAME|${DOMAIN}|g" /tmp/deploy_script.sh
+
+          # ── Upload and execute ───────────────────────────────────────
+          scp /tmp/deploy_script.sh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
+
+          echo "📡 Executing deployment (timeout: 10 min)..."
+          timeout 600 ssh \
+            -o ConnectTimeout=10 \
+            -o ServerAliveInterval=30 \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "bash /tmp/deploy_script.sh" || exit 1
