@@ -26,7 +26,8 @@
     "test:e2e:headed": "npm run test:headed --prefix tests",
     "test:e2e:ui": "npm run test:ui --prefix tests",
     "test:e2e:report": "npm run report --prefix tests",
-    "clean": "node scripts/clean.js"
+    "clean:ps": "pwsh -NoProfile -File scripts/clean.ps1",
+    "clean:sh": "bash scripts/clean.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
