@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { MeetingDetail } from '../components/meeting/MeetingDetail';
-import { useMeeting, useJoinMeeting, useLeaveMeeting, useDeleteMeeting } from '../hooks/useMeetings';
+import { useMeeting, useJoinMeeting, useLeaveMeeting, useCancelMeeting } from '../hooks/useMeetings';
 import { useRealtime } from '../hooks/useRealtime';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/ui/Toast';
@@ -17,7 +17,7 @@ export default function MeetingDetailPage() {
   const { meeting, isLoading, error, setMeeting } = useMeeting(id, user?.id);
   const { join, isLoading: isJoining } = useJoinMeeting();
   const { leave, isLoading: isLeaving } = useLeaveMeeting();
-  const { remove, isLoading: isDeleting } = useDeleteMeeting();
+  const { cancel, isLoading: isCancelling } = useCancelMeeting();
 
   useDocumentTitle(meeting?.title || 'Meeting Details');
 
@@ -63,13 +63,13 @@ export default function MeetingDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleCancel = async () => {
     try {
-      await remove(id!);
-      toast('Meeting deleted.', 'success');
-      navigate('/', { replace: true });
+      const cancelled = await cancel(id!);
+      setMeeting({ ...cancelled, participants: meeting?.participants ?? [] });
+      toast('Meeting cancelled.', 'info');
     } catch (err: any) {
-      toast(err.message || 'Failed to delete meeting', 'error');
+      toast(err.message || 'Failed to cancel meeting', 'error');
     }
   };
 
@@ -79,10 +79,10 @@ export default function MeetingDetailPage() {
       connectionState={connectionState}
       onJoin={handleJoin}
       onLeave={handleLeave}
-      onDelete={handleDelete}
+      onCancel={handleCancel}
       isJoining={isJoining}
       isLeaving={isLeaving}
-      isDeleting={isDeleting}
+      isCancelling={isCancelling}
     />
   );
 }

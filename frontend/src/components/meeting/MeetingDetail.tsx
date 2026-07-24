@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
 import { Badge, statusBadgeVariant } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -14,10 +14,10 @@ interface MeetingDetailProps {
   connectionState: 'connected' | 'polling' | 'disconnected';
   onJoin: () => Promise<void>;
   onLeave: () => Promise<void>;
-  onDelete: () => Promise<void>;
+  onCancel: () => Promise<void>;
   isJoining: boolean;
   isLeaving: boolean;
-  isDeleting: boolean;
+  isCancelling: boolean;
 }
 
 export function MeetingDetail({
@@ -25,14 +25,13 @@ export function MeetingDetail({
   connectionState,
   onJoin,
   onLeave,
-  onDelete,
+  onCancel,
   isJoining,
   isLeaving,
-  isDeleting,
+  isCancelling,
 }: MeetingDetailProps) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const date = new Date(meeting.dateTime);
   const spotsLeft = meeting.capacity - (meeting.participantCount ?? 0);
@@ -63,9 +62,9 @@ export function MeetingDetail({
               <Button variant="secondary" size="sm">Edit</Button>
             </Link>
           )}
-          {isHost && (
-            <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)} isLoading={isDeleting}>
-              Delete
+          {isHost && !isPast && (
+            <Button variant="danger" size="sm" onClick={() => setShowCancelModal(true)} isLoading={isCancelling}>
+              Cancel Meeting
             </Button>
           )}
         </div>
@@ -135,20 +134,20 @@ export function MeetingDetail({
         </div>
       )}
 
-      {/* Delete confirmation modal */}
+      {/* Cancel confirmation modal */}
       <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Meeting"
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Meeting"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-            <Button variant="danger" onClick={onDelete} isLoading={isDeleting}>Delete</Button>
+            <Button variant="secondary" onClick={() => setShowCancelModal(false)}>Keep Meeting</Button>
+            <Button variant="danger" onClick={async () => { await onCancel(); setShowCancelModal(false); }} isLoading={isCancelling}>Cancel Meeting</Button>
           </>
         }
       >
         <p className="text-gray-600 dark:text-gray-300">
-          Are you sure you want to delete &quot;{meeting.title}&quot;? This action cannot be undone.
+          Are you sure you want to cancel &quot;{meeting.title}&quot;? Participants will be notified and the meeting will remain visible as cancelled.
         </p>
       </Modal>
     </div>

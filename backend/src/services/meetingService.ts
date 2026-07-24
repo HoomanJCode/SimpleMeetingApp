@@ -6,7 +6,6 @@ import { logger } from '../utils/logger';
 import {
   emitMeetingCreated,
   emitMeetingUpdated,
-  emitMeetingDeleted,
   emitMeetingCancelled,
   emitParticipantJoined,
   emitParticipantLeft,
@@ -276,27 +275,34 @@ export function updateMeeting(id: string, userId: string, data: UpdateMeetingInp
 }
 
 /**
- * Deletes a meeting. Only the host can delete.
+ * Cancels a meeting by setting its status to 'cancelled'.
+ * Only the host can cancel. Meetings are never permanently deleted.
  */
-export function deleteMeeting(id: string, userId: string): void {
+export function cancelMeeting(id: string, userId: string): Meeting {
   const db = getDb();
 
-  const meeting = db.prepare('SELECT host_id FROM meetings WHERE id = ?').get(id) as { host_id: string } | undefined;
+  const meeting = db.prepare('SELECT host_id, status FROM meetings WHERE id = ?').get(id) as { host_id: string; status: string } | undefined;
 
   if (!meeting) {
     throw new NotFoundError('Meeting');
   }
 
   if (meeting.host_id !== userId) {
-    throw new ForbiddenError('Only the host can delete this meeting');
+    throw new ForbiddenError('Only the host can cancel this meeting');
   }
 
-  db.prepare('DELETE FROM meetings WHERE id = ?').run(id);
+  if (meeting.status === 'cancelled') {
+    throw new ConflictError('Meeting is already cancelled');
+  }
 
-  logger.info({ meetingId: id, userId }, 'Meeting deleted');
+  db.prepare("UPDATE meetings SET status = 'cancelled', updated_at = datetime('now') WHERE id = ?").run(id);
 
-  // Broadcast deletion
-  try { emitMeetingDeleted(id); } catch { /* WebSocket may not be initialized yet */ }
+  logger.info({ meetingId: id, userId }, 'Meeting cancelled');
+
+  // Broadcast cancellation
+  try { emitMeetingCancelled(id); } catch { /* WebSocket may not be initialized yet */ }
+
+  return getMeetingById(id, userId);
 }
 
 /**
@@ -373,7 +379,7 @@ export function leaveMeeting(meetingId: string, userId: string): { participantCo
   }
 
   if (meeting.host_id === userId) {
-    throw new ConflictError('Host cannot leave their own meeting. Cancel or delete it instead.');
+    throw new ConflictError('Host cannot leave their own meeting. Cancel it instead.');
   }
 
   const result = db

@@ -4,7 +4,7 @@ import {
   getMeeting,
   createMeeting as apiCreateMeeting,
   updateMeeting as apiUpdateMeeting,
-  deleteMeeting as apiDeleteMeeting,
+  cancelMeeting as apiCancelMeeting,
   joinMeeting as apiJoinMeeting,
   leaveMeeting as apiLeaveMeeting,
   getMyMeetings,
@@ -121,19 +121,20 @@ export function useUpdateMeeting() {
   return { update, isLoading };
 }
 
-export function useDeleteMeeting() {
+export function useCancelMeeting() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const remove = useCallback(async (id: string) => {
+  const cancel = useCallback(async (id: string) => {
     setIsLoading(true);
     try {
-      await apiDeleteMeeting(id);
+      const result = await apiCancelMeeting(id);
+      return result;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  return { remove, isLoading };
+  return { cancel, isLoading };
 }
 
 export function useJoinMeeting() {
