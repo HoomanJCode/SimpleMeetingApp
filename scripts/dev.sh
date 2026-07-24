@@ -77,7 +77,25 @@ cleanup() {
 trap cleanup INT TERM
 
 echo
-echo "▶ Starting in TEST mode (dummy OAuth, ports 127.0.0.1)"
+cat <<'TEST_BANNER'
+┌───────────────────────────────────────────────────────────────┐
+│  TEST MODE - dummy OAuth, no Google interaction required       │
+│                                                                 │
+│  · Auth: backend exposes POST /api/test/login (dev-only).       │
+│    Any {id,email,name} body mints a valid JWT locally.          │
+│  · The frontend's 'Sign in with Google' button is wired up      │
+│    identically; the only thing that changes between TEST and    │
+│    PROD is whether the backend hits Google or mocks the reply.  │
+│  · Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.sh.   │
+│                                                                 │
+│  Want REAL Google OAuth? Ctrl+C and run instead:                │
+│      scripts/prod.sh             (Linux / macOS, Bash 4+)        │
+│      scripts/prod.ps1            (Windows, PowerShell 5.1+)     │
+│                                                                 │
+│  First time with real Google? See documents/google-oauth-setup.md│
+│  for the step-by-step Cloud Console walkthrough.                │
+└───────────────────────────────────────────────────────────────┘
+TEST_BANNER
 echo
 
 # ---- Spawn backend ----------------------------------------------------

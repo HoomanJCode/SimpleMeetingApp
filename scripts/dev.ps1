@@ -85,7 +85,23 @@ function Resolve-Npm {
 }
 
 Write-Host ''
-Write-Host '▶ Starting in TEST mode (dummy OAuth, /api/test/login, ports 127.0.0.1)' -ForegroundColor Cyan
+Write-Host '┌───────────────────────────────────────────────────────────────┐' -ForegroundColor Cyan
+Write-Host '│  TEST MODE - dummy OAuth, no Google interaction required       │' -ForegroundColor Cyan
+Write-Host '│                                                                 │' -ForegroundColor Cyan
+Write-Host '│  · Auth: backend exposes POST /api/test/login (dev-only).       │' -ForegroundColor Cyan
+Write-Host '│    Any {id,email,name} body mints a valid JWT locally.          │' -ForegroundColor Cyan
+Write-Host '│  · The frontend Sign in with Google button is wired up         │' -ForegroundColor Cyan
+Write-Host '│    identically; only difference vs PROD is whether the         │' -ForegroundColor Cyan
+Write-Host '│    backend hits Google or mocks the reply.                      │' -ForegroundColor Cyan
+Write-Host '│  · Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.ps1.  │' -ForegroundColor Cyan
+Write-Host '│                                                                 │' -ForegroundColor Cyan
+Write-Host '│  Want REAL Google OAuth? Ctrl+C now and run instead:           │' -ForegroundColor Cyan
+Write-Host '│      scripts/prod.sh            (Linux / macOS, Bash 4+)        │' -ForegroundColor Cyan
+Write-Host '│      scripts/prod.ps1           (Windows, PowerShell 5.1+)     │' -ForegroundColor Cyan
+Write-Host '│                                                                 │' -ForegroundColor Cyan
+Write-Host '│  First time with real Google? See documents/google-oauth-setup │' -ForegroundColor Cyan
+Write-Host '│  .md for the step-by-step Cloud Console walkthrough.           │' -ForegroundColor Cyan
+Write-Host '└───────────────────────────────────────────────────────────────┘' -ForegroundColor Cyan
 Write-Host ''
 
 # ---- Snapshot parent env, layer backend overlay for its spawn only ----
