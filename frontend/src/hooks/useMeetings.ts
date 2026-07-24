@@ -34,7 +34,7 @@ export function useMeetingList(params?: Record<string, string | number>) {
     } finally {
       setIsLoading(false);
     }
-  }, [params?.page, params?.search, params?.status]);
+  }, [params?.page, params?.search, params?.status, params?.fromDate, params?.toDate, params?.limit]);
 
   useEffect(() => {
     fetch();

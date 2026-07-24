@@ -62,6 +62,8 @@ export interface MeetingFilters {
   limit?: number;
   search?: string;
   status?: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface PaginatedResult<T> {

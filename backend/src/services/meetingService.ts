@@ -142,6 +142,16 @@ export function getMeetings(filters: MeetingFilters, userId?: string): Paginated
     whereClause += " AND m.status IN ('upcoming', 'ongoing')";
   }
 
+  if (filters.fromDate) {
+    whereClause += ' AND m.date_time >= ?';
+    params.push(filters.fromDate);
+  }
+
+  if (filters.toDate) {
+    whereClause += ' AND m.date_time <= ?';
+    params.push(filters.toDate);
+  }
+
   // Count total
   const countRow = db
     .prepare(`SELECT COUNT(*) as total FROM meetings m ${whereClause}`)
