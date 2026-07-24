@@ -221,7 +221,7 @@ If you ever change the values, update all three files. The `KEEP IN SYNC` commen
 ### Cross-platform notes
 
 - **`dev.ps1` / `prod.ps1` are Windows-only.** Each detects non-Windows at startup and exits 1 with a hint to use the `.sh` sibling. This is intentional — the scripts depend on `taskkill.exe` and `Get-NetTCPConnection`.
-- **`dev.sh` / `prod.sh` require bash 4+** for process substitution (`> >(...)`). macOS's default bash 3.2 won't work; either install bash from Homebrew (`brew install bash`) or just run via `bash scripts/dev.sh` directly (which compiles fine in any bash ≥3.2 since the substitution is at parse time of bash 4+ — you can install bash 5 easily via `brew install bash`).
+- **`dev.sh` / `prod.sh` require bash 4+** for process substitution (`&> >(...)`). macOS's default bash 3.2 won't work — process substitution is a parse-time feature, so invoking through `bash scripts/dev.sh` won't help either. Install bash 4+ from Homebrew (`brew install bash`) so `/opt/homebrew/bin/bash` is on your PATH, then re-run via `bash scripts/dev.sh`.
 
 ## API
 

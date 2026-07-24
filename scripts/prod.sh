@@ -128,8 +128,7 @@ if [ ! -f "$ENV_PATH" ]; then
         exit 1
     fi
     if [ ! -f "$EXAMPLE_PATH" ]; then
-        echo "  ✗ backend/.env.example not found; aborting." >&2
-        exit 1
+        echo "  (note: backend/.env.example not found; this is fine - prompts will use inline defaults)"
     fi
 
     echo "▶ backend/.env not found - launching inline .env setup."
@@ -300,5 +299,9 @@ else
     echo "  (no xdg-open or open found on PATH - open http://localhost:5173 manually)" >&2
 fi
 
-wait -n || true
-wait || true
+# Capture exit codes without `|| true` (which would silently overwrite
+# $? to 0 and mask a child crash as a success to CI).
+wait -n; first=$?
+wait;     last=$?
+if [ "$first" -ne 0 ]; then exit "$first"; fi
+exit "$last"

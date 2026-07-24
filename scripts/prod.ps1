@@ -166,8 +166,7 @@ if (-not (Test-Path $EnvPath)) {
     Write-Host ''
 
     if (-not (Test-Path $ExamplePath)) {
-        Write-Host '  ✗ backend/.env.example not found; aborting.' -ForegroundColor Red
-        exit 1
+        Write-Host '  (note: backend/.env.example not found; this is fine - prompts will use inline defaults)' -ForegroundColor DarkGray
     }
 
     # Overwrite guard - never destroy a real .env silently.

@@ -106,5 +106,10 @@ else
 fi
 
 # ---- Wait ------------------------------------------------------------
-wait -n || true
-wait || true
+# Capture exit codes without `|| true` (which would silently overwrite
+# $? to 0 and mask a child crash as a success to CI). Wait twice: once
+# for whichever child exits first, then for the second.
+wait -n; first=$?
+wait;     last=$?
+if [ "$first" -ne 0 ]; then exit "$first"; fi
+exit "$last"
