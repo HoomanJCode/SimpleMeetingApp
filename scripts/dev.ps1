@@ -164,16 +164,35 @@ $FrontendProc = $null
 # a bit more time is needed. $eventArgs.Cancel=$true suppresses
 # PowerShell's default behavior of terminating the whole script
 # immediately on Ctrl+C.
-$CancelHandler = [Console]::CancelKeyPress.Add({
-    param($sender, $eventArgs)
-    $eventArgs.Cancel = $true
-    Start-Sleep -Milliseconds 200
-    foreach ($proc in @($BackendProc, $FrontendProc)) {
-        if ($null -ne $proc -and -not $proc.HasExited) {
-            & taskkill.exe /F /T /PID $proc.Id 2>$null
+# Initialise explicitly so the finally-block's null guard is well-defined
+# even if [Console]::CancelKeyPress.Add() throws on registration.
+$CancelHandler = $null
+try {
+    # 200ms grace lets the native console broadcast (enabled by
+    # -NoNewWindow on both children) settle, so SIGINT-handling
+    # children can shut down gracefully before the taskkill wipe.
+    # $eventArgs.Cancel=$true suppresses PowerShell's default
+    # behavior of terminating the entire script immediately on Ctrl+C.
+    $CancelHandler = [Console]::CancelKeyPress.Add({
+        param($sender, $eventArgs)
+        $eventArgs.Cancel = $true
+        Start-Sleep -Milliseconds 200
+        foreach ($proc in @($BackendProc, $FrontendProc)) {
+            if ($null -ne $proc -and -not $proc.HasExited) {
+                & taskkill.exe /F /T /PID $proc.Id 2>$null
+            }
         }
-    }
-})
+    })
+}
+catch {
+    # If the registration fails (extremely rare, but possible in a
+    # non-console session), we still proceed: the wait-loop + finally
+    # block in this script will tree-kill orphaned children on normal
+    # exit. Only Ctrl+C mid-run is degraded; warn loudly so users
+    # notice.
+    Write-Warning ('Could not register Ctrl+C handler; Ctrl+C may not cleanly kill child processes. ' +
+        'Underlying error: ' + $_.Exception.Message)
+}
 
 try {
     # ---- Spawn backend (with env-var overlay) ----
