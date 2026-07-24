@@ -215,9 +215,36 @@ if (-not (Test-Path $EnvPath)) {
     $out['HOST'] = Ask 'HOST' '127.0.0.1'
 
     Write-Host ''
-    Write-Host '  Google OAuth credentials (create at https://console.cloud.google.com/' -ForegroundColor DarkGray
-    Write-Host '   -> APIs & Services -> Credentials -> Create OAuth client ID -> Web app).' -ForegroundColor DarkGray
-    Write-Host '  Authorized redirect URI must match whatever you give for GOOGLE_REDIRECT_URI below.' -ForegroundColor DarkGray
+    Write-Host '  ┌─────────────────────────────────────────────────────────────────┐' -ForegroundColor DarkGray
+    Write-Host '  │  Google OAuth credentials - where to get them                   │' -ForegroundColor DarkGray
+    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
+    Write-Host '  │  Full step-by-step walkthrough with exact field names:           │' -ForegroundColor DarkGray
+    Write-Host '  │      documents/google-oauth-setup.md                            │' -ForegroundColor DarkGray
+    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
+    Write-Host '  │  Quick version:                                                 │' -ForegroundColor DarkGray
+    Write-Host '  │    1. https://console.cloud.google.com   (sign in with Gmail)   │' -ForegroundColor DarkGray
+    Write-Host '  │    2. Top bar -> Select a project -> New project                │' -ForegroundColor DarkGray
+    Write-Host '  │         (e.g. ''IrMeetingApp Local'') -> Create                   │' -ForegroundColor DarkGray
+    Write-Host '  │    3. APIs & Services -> OAuth consent screen                   │' -ForegroundColor DarkGray
+    Write-Host '  │         -> External -> Create                                   │' -ForegroundColor DarkGray
+    Write-Host '  │         -> App name, support email, dev contact -> Save (x2)    │' -ForegroundColor DarkGray
+    Write-Host '  │         -> Test users -> Add YOUR Gmail -> Save and Continue    │' -ForegroundColor DarkGray
+    Write-Host '  │    4. APIs & Services -> Credentials -> Create Credentials      │' -ForegroundColor DarkGray
+    Write-Host '  │         -> OAuth client ID                                      │' -ForegroundColor DarkGray
+    Write-Host '  │         -> Application type: Web application                    │' -ForegroundColor DarkGray
+    Write-Host '  │         -> Authorized redirect URIs:                            │' -ForegroundColor DarkGray
+    Write-Host '  │            http://localhost:3001/api/auth/google/callback       │' -ForegroundColor DarkGray
+    Write-Host '  │         -> Create                                               │' -ForegroundColor DarkGray
+    Write-Host '  │    5. Copy the ''Your Client ID'' and ''Your Client secret''        │' -ForegroundColor DarkGray
+    Write-Host '  │         values from the modal (shown ONLY ONCE).                │' -ForegroundColor DarkGray
+    Write-Host '  │    6. Paste them into the prompts below.                        │' -ForegroundColor DarkGray
+    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
+    Write-Host '  │  Client ID format     : ....apps.googleusercontent.com         │' -ForegroundColor DarkGray
+    Write-Host '  │  Client secret format : GOCSPX-...                              │' -ForegroundColor DarkGray
+    Write-Host '  │  Authorized redirect URI must EXACTLY match the one in          │' -ForegroundColor DarkGray
+    Write-Host '  │  GOOGLE_REDIRECT_URI below (byte-by-byte; no trailing slash,    │' -ForegroundColor DarkGray
+    Write-Host '  │  http≠https, port matters).                                     │' -ForegroundColor DarkGray
+    Write-Host '  └─────────────────────────────────────────────────────────────────┘' -ForegroundColor DarkGray
     Write-Host ''
 
     $out['GOOGLE_CLIENT_ID']     = Ask 'GOOGLE_CLIENT_ID (required)' '' { param($v)

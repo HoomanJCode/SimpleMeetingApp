@@ -173,9 +173,40 @@ if [ ! -f "$ENV_PATH" ]; then
     HOST=$(ask "HOST" "127.0.0.1")
 
     echo
-    echo "  Google OAuth credentials (create at https://console.cloud.google.com/"
-    echo "  -> APIs & Services -> Credentials -> Create OAuth client ID -> Web app)."
-    echo "  Authorized redirect URI must match whatever you give for GOOGLE_REDIRECT_URI below."
+    cat <<'GOOGLE_GUIDE'
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  Google OAuth credentials - where to get them                   │
+  │                                                                 │
+  │  Full step-by-step walkthrough with exact field names:           │
+  │      documents/google-oauth-setup.md                            │
+  │                                                                 │
+  │  Quick version:                                                 │
+  │    1. https://console.cloud.google.com   (sign in with Gmail)   │
+  │    2. Top bar -> Select a project -> New project                │
+  │         (e.g. 'IrMeetingApp Local') -> Create                   │
+  │    3. APIs & Services -> OAuth consent screen                   │
+  │         -> External -> Create                                   │
+  │         -> App name, support email, dev contact -> Save (x2)    │
+  │         -> Test users -> Add YOUR Gmail -> Save and Continue    │
+  │    4. APIs & Services -> Credentials -> Create Credentials      │
+  │         -> OAuth client ID                                      │
+  │         -> Application type: Web application                    │
+  │         -> Authorized redirect URIs:                            │
+  │            http://localhost:3001/api/auth/google/callback       │
+  │         -> Create                                               │
+  │    5. Copy the 'Your Client ID' and 'Your Client secret'        │
+  │         values from the modal (shown ONLY ONCE).                │
+  │    6. Paste them into the prompts below.                        │
+  │                                                                 │
+  │  Client ID format     : ....apps.googleusercontent.com         │
+  │  Client secret format : GOCSPX-...                              │
+  │  Authorized redirect URI must EXACTLY match the one in          │
+  │  GOOGLE_REDIRECT_URI below (byte-by-byte; no trailing slash,    │
+  │  http≠https, port matters).                                     │
+  └─────────────────────────────────────────────────────────────────┘
+
+GOOGLE_GUIDE
     echo
 
     GOOGLE_CLIENT_ID=$(ask "GOOGLE_CLIENT_ID (required)" "" min_5_chars)
