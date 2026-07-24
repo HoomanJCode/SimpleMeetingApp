@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useState } from 'react';
 import { ThemeToggle } from '../theme/ThemeToggle';
+import { LoginModal } from '../auth/LoginModal';
 
 export function Header() {
-  const { user, login, logout } = useAuth();
+  const { user, login, logout, authMethod, loginWithEmail } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors">
@@ -43,6 +45,20 @@ export function Header() {
                     Sign Out
                   </button>
                 </div>
+              </>
+            ) : authMethod === 'userpass' ? (
+              <>
+                <button
+                  onClick={() => setLoginModalOpen(true)}
+                  className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                >
+                  Sign In
+                </button>
+                <LoginModal
+                  isOpen={loginModalOpen}
+                  onClose={() => setLoginModalOpen(false)}
+                  onLogin={loginWithEmail}
+                />
               </>
             ) : (
               <>
@@ -89,6 +105,20 @@ export function Header() {
                 <Link to="/my-meetings" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>My Meetings</Link>
                 <Link to="/meetings/new" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>Create Meeting</Link>
                 <button onClick={logout} className="text-left text-red-500 hover:text-red-600 pt-2 border-t border-gray-100 dark:border-gray-800">Sign Out</button>
+              </div>
+            ) : authMethod === 'userpass' ? (
+              <div className="flex flex-col gap-3 pt-4">
+                <button
+                  onClick={() => { setMenuOpen(false); setLoginModalOpen(true); }}
+                  className="w-full text-center py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                >
+                  Sign In
+                </button>
+                <LoginModal
+                  isOpen={loginModalOpen}
+                  onClose={() => setLoginModalOpen(false)}
+                  onLogin={loginWithEmail}
+                />
               </div>
             ) : (
               <button onClick={login} className="w-full text-center py-2 mt-4 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors">

@@ -195,6 +195,67 @@ export async function handleGoogleCallback(code: string): Promise<AuthTokens> {
 }
 
 /**
+ * Logs in (or auto-registers) a user with email + password.
+ * Only available when AUTH_METHOD=userpass (dev/test mode).
+ * The password is stored as a simple hash for dev use.
+ */
+export function loginWithEmailPassword(email: string, password: string): AuthTokens {
+  const env = getEnv();
+  if (env.AUTH_METHOD !== 'userpass') {
+    throw new UnauthorizedError('Email/password login is not available');
+  }
+
+  const db = getDb();
+  const passwordHash = hashToken(password);
+
+  let dbUser = db
+    .prepare('SELECT * FROM users WHERE email = ?')
+    .get(email) as DbUserRow | undefined;
+
+  if (dbUser) {
+    // Verify password
+    const storedHash = (
+      db.prepare('SELECT password_hash FROM users WHERE id = ?').get(dbUser.id) as
+        | { password_hash: string | null }
+        | undefined
+    )?.password_hash;
+
+    if (storedHash && storedHash !== passwordHash) {
+      throw new UnauthorizedError('Invalid password');
+    }
+
+    // Update password hash if not set (existing user from Google OAuth)
+    if (!storedHash) {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, dbUser.id);
+    }
+
+    return generateTokens(mapDbUser(dbUser));
+  }
+
+  // Auto-register new user
+  const id = crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const now = new Date().toISOString();
+  const name = email.split('@')[0];
+
+  db.prepare(
+    `INSERT INTO users (id, google_id, email, name, password_hash, avatar_url, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`
+  ).run(id, `local_${id}`, email, name, passwordHash, now, now);
+
+  const newUser: User = {
+    id,
+    googleId: `local_${id}`,
+    email,
+    name,
+    avatarUrl: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  return generateTokens(newUser);
+}
+
+/**
  * Validates a refresh token and returns new auth tokens.
  * Rotates the refresh token (old one is deleted).
  * Accepts the RAW refresh token, hashes it for DB lookup.

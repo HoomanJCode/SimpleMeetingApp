@@ -29,6 +29,8 @@ const windowsCompat = Object.freeze({
 });
 
 const testSecrets = Object.freeze({
+  // Use email/password login instead of Google OAuth in dev/test mode.
+  AUTH_METHOD: 'userpass',
   // Enables /api/test/login + /api/test/reset (otherwise 404 in production).
   ENABLE_TEST_ROUTES: '1',
   // Dummy values — the test login endpoint never reaches Google.

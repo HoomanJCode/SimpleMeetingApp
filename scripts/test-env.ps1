@@ -43,6 +43,7 @@ $script:WindowsCompat = @{
 # testSecrets - applied ONLY in test mode. Dummy values; the test login
 # endpoint never reaches Google. Backend's env.ts requires JWT_SECRET >= 32 chars.
 $script:TestSecrets = @{
+    AUTH_METHOD                = 'userpass'
     ENABLE_TEST_ROUTES         = '1'
     GOOGLE_CLIENT_ID           = 'test-google-client-id'
     GOOGLE_CLIENT_SECRET       = 'test-google-client-secret'

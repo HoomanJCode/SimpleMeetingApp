@@ -30,6 +30,7 @@ WINDOWS_COMPAT_FRONTEND_URL=http://127.0.0.1:5173
 # testSecrets - applied ONLY in test mode. Dummy values; the test login
 # endpoint never reaches Google. Backend's env.ts requires >= 32 chars.
 TEST_SECRET_ENABLE_TEST_ROUTES=1
+TEST_SECRET_AUTH_METHOD=userpass
 TEST_SECRET_GOOGLE_CLIENT_ID=test-google-client-id
 TEST_SECRET_GOOGLE_CLIENT_SECRET=test-google-client-secret
 TEST_SECRET_GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
@@ -51,6 +52,7 @@ backend_env_prefix() {
     if [ "$mode" = "test" ]; then
         prefix="$prefix \
             ENABLE_TEST_ROUTES=$TEST_SECRET_ENABLE_TEST_ROUTES \
+            AUTH_METHOD=$TEST_SECRET_AUTH_METHOD \
             GOOGLE_CLIENT_ID=$TEST_SECRET_GOOGLE_CLIENT_ID \
             GOOGLE_CLIENT_SECRET=$TEST_SECRET_GOOGLE_CLIENT_SECRET \
             GOOGLE_REDIRECT_URI=$TEST_SECRET_GOOGLE_REDIRECT_URI \
