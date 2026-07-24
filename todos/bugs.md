@@ -43,3 +43,21 @@ Report bugs here with a brief description. I'll add root cause analysis and file
 
 ---
 
+## ✅ 5. "Join Meeting" button shows after sign out/in for already-joined meetings
+
+**Where:** Meeting detail page — after signing out and signing back in  
+**What:** The "Join Meeting" button appeared instead of "Leave Meeting" for meetings the user had already joined. Clicking join caused a "Already joined" error.  
+**Root cause:** `useMeeting` hook's `useEffect` only depended on `id`. When the user signed out/in, the hook didn't refetch. Additionally, React effects fire bottom-up, so `MeetingDetailPage`'s effect ran BEFORE `AuthProvider` configured the API client — the first `GET /meetings/:id` happened without a Bearer token, returning `isJoined=false`.  
+**Fix:** Added optional `userId` parameter to `useMeeting`, included in dependency array. `MeetingDetailPage` passes `user?.id`. When userId changes (null → actual ID after login), the hook refetches with auth.  
+**Commit:** `0d13f5d`
+
+---
+
+## ✅ 6. "Stay or Leave?" popup after saving edits (Edit Meeting)
+
+**Where:** Edit Meeting page — after clicking "Save Changes" and the API succeeds  
+**What:** Same NavigationBlocker bug as #2, but on the Edit page.  
+**Fix:** Applied the same three-guard fix: `submittedRef`, `setIsDirty(false)`, `setTimeout(0)` deferred navigation.  
+**Commit:** `12fe506`
+
+---
