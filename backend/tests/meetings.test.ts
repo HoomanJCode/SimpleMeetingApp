@@ -159,23 +159,26 @@ describe('Meetings API integration', () => {
     });
   });
 
-  describe('DELETE /api/meetings/:id', () => {
-    it('deletes the meeting when the host requests it', async () => {
+  describe('POST /api/meetings/:id/cancel', () => {
+    it('cancels the meeting when the host requests it', async () => {
       const created = await request(app)
         .post('/api/meetings')
         .set('Authorization', `Bearer ${hostToken()}`)
         .send(validMeeting())
         .expect(201);
 
-      await request(app)
-        .delete(`/api/meetings/${created.body.id}`)
+      const res = await request(app)
+        .post(`/api/meetings/${created.body.id}/cancel`)
         .set('Authorization', `Bearer ${hostToken()}`)
-        .expect(204);
+        .expect(200);
 
-      await request(app).get(`/api/meetings/${created.body.id}`).expect(404);
+      expect(res.body.status).toBe('cancelled');
+
+      const getRes = await request(app).get(`/api/meetings/${created.body.id}`).expect(200);
+      expect(getRes.body.status).toBe('cancelled');
     });
 
-    it('returns 403 when a non-host tries to delete', async () => {
+    it('returns 403 when a non-host tries to cancel', async () => {
       const created = await request(app)
         .post('/api/meetings')
         .set('Authorization', `Bearer ${hostToken()}`)
@@ -183,7 +186,7 @@ describe('Meetings API integration', () => {
         .expect(201);
 
       await request(app)
-        .delete(`/api/meetings/${created.body.id}`)
+        .post(`/api/meetings/${created.body.id}/cancel`)
         .set('Authorization', `Bearer ${otherToken()}`)
         .expect(403);
     });
