@@ -41,43 +41,109 @@ IrMeetingApp/
 │   ├── e2e/          # Spec files (auth, meetings, participants, realtime)
 │   ├── fixtures/     # Test users + meeting templates
 │   └── helpers/      # loginAs, authedFetch, resetDb
+├── scripts/          # The ONLY two user-facing scripts:
+│   ├── dev.{ps1,sh}  # Test mode (dummy OAuth + /api/test/login). Auto-opens browser.
+│   ├── prod.{ps1,sh} # Real mode (Google OAuth via backend/.env). Auto-opens browser.
+│   ├── test-env.cjs  # Kept for tests/playwright.config.ts via require()
+│   └── test-env.{ps1,sh}  # Inlined test overlay, dot-sourced by dev.{ps1,sh}.
 ├── documents/        # Architecture & design docs
 └── todos/            # Implementation task lists
 ```
 
 ## Quick Start
 
+The app has **exactly two** scripts:
+
+- **`dev.{ps1,sh}`** — test mode. No `.env` needed, uses dummy OAuth + the dev-only `/api/test/login` endpoint. Loads [http://localhost:5173](http://localhost:5173) in your browser.
+- **`prod.{ps1,sh}`** — production-like mode. Reads real Google OAuth from `backend/.env`. Inline env-wizard creates `.env` for you when missing. Loads [http://localhost:5173](http://localhost:5173) in your browser.
+
+Both scripts auto-install any missing npm dependencies on first run (root + backend + frontend + tests, plus Playwright Chromium if tests are missing). Re-running them is safe and idempotent.
+
 ### Prerequisites
 
 - Node.js 20+
-- A Google Cloud Console project with OAuth 2.0 credentials
+- PowerShell 5.1+ on Windows (any Linux/macOS bash 3+ for non-Windows users)
+- (Production mode only) A Google Cloud Console project with OAuth 2.0 credentials
   - Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
+  - Full step-by-step walkthrough (screenshots-equivalent instructions, troubleshooting FAQ): **[docs/google-oauth-setup.md](documents/google-oauth-setup.md)**
 
-### 1. Backend
+### Google OAuth credentials (production mode only)
 
-```bash
-cd backend
-cp .env.example .env
-# Edit .env — fill in GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET, FRONTEND_URL
-npm install
-npm run dev
+`scripts/prod.sh` / `scripts/prod.ps1` need three values written into `backend/.env`:
+
+| Variable                 | Where it comes from                                                                 |
+|--------------------------|--------------------------------------------------------------------------------------|
+| `GOOGLE_CLIENT_ID`       | "Your Client ID" in the OAuth-client-created modal (ends in `.apps.googleusercontent.com`) |
+| `GOOGLE_CLIENT_SECRET`   | "Your Client secret" in the same modal (starts with `GOCSPX-`) — **shown only once** |
+| `GOOGLE_REDIRECT_URI`    | The redirect URI you entered in the Cloud Console's "Authorized redirect URIs" field |
+
+Quick recap (the full walkthrough is in [docs/google-oauth-setup.md](documents/google-oauth-setup.md)):
+
+  1. Sign in to <https://console.cloud.google.com/> with your Gmail.
+  2. Create a new project (e.g. `IrMeetingApp Local`).
+  3. **APIs & Services → OAuth consent screen** → User type: **External** → fill app name + your Gmail → **Save and Continue** → add your Gmail as a **Test user**.
+  4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type: **Web application** → Authorized redirect URI: `http://localhost:3001/api/auth/google/callback` → **Create**.
+  5. Copy the **Client ID** + **Client secret** from the resulting modal.
+  6. Run `bash scripts/prod.sh` (or `pwsh -File scripts/prod.ps1`); the inline wizard pastes both values into `backend/.env` for you.
+
+> Why a separate doc instead of inline? Google Console's UI has 5+ screens with exact field-name requirements (and the `redirect_uri_mismatch` trap is unforgiving — byte-exact match required). Documents are easier to copy/paste from, follow on a second monitor, and link to from a Slack escalation than inline wizard text. The wizard still prints a condensed 6-step summary on first run, so you don't need to leave the terminal.
+
+### Run the app
+
+**TEST mode (no .env needed, viewable in browser):**
+
+```powershell
+# Windows
+pwsh -NoProfile -File scripts/dev.ps1
 ```
 
-The backend starts on `http://localhost:3001`.
-
-### 2. Frontend
-
 ```bash
-cd frontend
-npm install
-npm run dev
+# Linux / macOS
+bash scripts/dev.sh
 ```
 
-The frontend starts on `http://localhost:5173`.
+Both spawn backend + frontend as concurrent children, then open [http://localhost:5173](http://localhost:5173) in your default browser. In test mode, log in by visiting any URL like `http://localhost:5173/auth/callback?token=…` — see `tests/helpers/auth.ts` for how the test helpers mint tokens, or call `POST /api/test/login` manually (body: `{id, email, name}`).
 
-### 3. Open the App
+To stop both servers cleanly: `Ctrl+C` in the terminal that ran the script.
 
-Navigate to [http://localhost:5173](http://localhost:5173) and sign in with Google.
+> Tip: `package.json` exposes equivalent npm aliases `npm run dev:ps` / `npm run dev:sh` if you prefer `npm` vocabulary.
+
+**PRODUCTION-like mode (real Google OAuth):**
+
+```powershell
+# Windows
+pwsh -NoProfile -File scripts/prod.ps1
+```
+
+```bash
+# Linux / macOS
+bash scripts/prod.sh
+```
+
+If `backend/.env` doesn't exist yet, the script auto-detects that and launches the inline env-wizard (prompts you for Google OAuth credentials + JWT_SECRET; can auto-generate JWT_SECRET with `g`). Once `.env` is recorded, the script drops you straight into production-like mode.
+
+Behavior of the inline env-wizard depends on whether stdin is an interactive TTY:
+
+| Context                                  | What `prod` does                                                                       |
+|------------------------------------------|----------------------------------------------------------------------------------------|
+| `backend/.env` exists                    | Boots straight into PROD mode.                                                         |
+| `backend/.env` missing, interactive TTY  | Runs the inline env-wizard; writes `.env` on success; boots PROD mode.                  |
+| `backend/.env` missing, CI / piped       | Exits 1 with a clear hint to create `.env` manually or run prod interactively.         |
+
+Cross-platform: PowerShell reads `[Console]::IsInputRedirected`, Bash reads `[ -t 0 ]`; both share the same 11-field wizard schema, validator set, and 3-attempts-then-bail-on-validation behavior.
+
+You'll need a Google OAuth client ID + secret (create one at [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → Web app, with redirect URI `http://localhost:3001/api/auth/google/callback`).
+
+> Tip: `package.json` exposes equivalent npm aliases `npm run prod:ps` / `npm run prod:sh` if you prefer `npm` vocabulary.
+
+### Manual per-subproject setup (legacy)
+
+If you don't want to use the root scripts, the old per-folder flow still works:
+
+```bash
+cd backend    && cp .env.example .env && npm install && npm run dev   # http://localhost:3001
+cd frontend   && npm install && npm run dev                            # http://localhost:5173
+```
 
 ## Environment Variables
 
@@ -99,36 +165,25 @@ Navigate to [http://localhost:5173](http://localhost:5173) and sign in with Goog
 
 ## Testing
 
-### Backend Unit + Integration Tests
-
 ```bash
-cd backend
-npm test                # 84+ tests (auth, meetings, validation, rate limiting, WebSocket)
-npm run test:watch      # Watch mode
+npm test               # all tests: backend + frontend unit + Playwright E2E
+npm run test:unit      # backend + frontend unit tests only (no browser)
+npm run test:e2e       # Playwright E2E only (auto-starts servers via webServer)
+npm run test:e2e:ui    # Playwright with the UI runner (interactive)
 ```
 
-### Frontend Unit Tests
+The E2E suite auto-starts both servers via the `webServer` config in
+`tests/playwright.config.ts`, using the same test env (`scripts/test-env.cjs`) that
+`scripts/dev.{ps1,sh}` source. No real Google OAuth credentials are needed — tests pump tokens
+through the dev-only `/api/test/login` endpoint.
 
-```bash
-cd frontend
-npm test                # 52+ tests (components, hooks, auth context)
-npm run test:watch      # Watch mode
-```
+### What gets tested where
 
-### E2E Tests (Playwright)
-
-The E2E tests require both backend and frontend running. Playwright handles this automatically via the `webServer` config.
-
-```bash
-cd tests
-npm install
-npx playwright install chromium
-npx playwright test     # Headless (CI)
-npx playwright test --headed  # Visible browser
-npx playwright test --ui      # UI mode
-```
-
-> **Note:** The webServer in `tests/playwright.config.ts` provides dummy Google OAuth env vars. E2E tests bypass the real Google flow via a dev-only `/api/test/login` endpoint. To run E2E tests, no real OAuth credentials are needed.
+| Layer        | Runner   | Count | What it covers                                              |
+|--------------|----------|-------|-------------------------------------------------------------|
+| Backend      | Vitest   | 84+   | auth, meetings, validation, rate limiting, WebSocket          |
+| Frontend     | Vitest   | 52+   | UI components, hooks, AuthContext                            |
+| E2E (Playwright) | Chromium | —  | full flows: auth, meeting CRUD, participants, realtime       |
 
 ### E2E Test Fixtures
 
@@ -149,34 +204,46 @@ npx playwright test --ui      # UI mode
 
 ## Scripts Reference
 
-### Backend
+The repo exposes ONLY **two user-facing scripts** per platform (`dev` and `prod`); every prior helper (`setup`, `kill-servers`, `db`, `clean`, `env-wizard`) is gone — its responsibilities are inlined into the two entry points.
 
-| Script                | Description                              |
-|-----------------------|------------------------------------------|
-| `npm run dev`         | Dev server with hot reload (`tsx watch`) |
-| `npm run build`       | Compile to `dist/` (`tsc`)               |
-| `npm start`           | Run compiled server                      |
-| `npm test`            | Run tests (Vitest)                       |
-| `npm run lint`        | Type-check (`tsc --noEmit`)              |
+| Windows (PowerShell)            | Linux / macOS (Bash)            | Description                                                                                            |
+|---------------------------------|---------------------------------|--------------------------------------------------------------------------------------------------------|
+| `pwsh -File scripts/dev.ps1`    | `bash scripts/dev.sh`           | Start backend + frontend in **TEST mode** (dummy OAuth, no .env). Auto-installs deps; auto-opens browser.   |
+| `pwsh -File scripts/prod.ps1`   | `bash scripts/prod.sh`          | Start backend + frontend in **PROD mode** (real Google OAuth from `backend/.env`). Inline env-wizard if missing; auto-installs deps; auto-opens browser. |
+| `npm run dev:ps` / `npm run dev:sh`    | corresponding npm aliases for `dev` |
+| `npm run prod:ps` / `npm run prod:sh`  | corresponding npm aliases for `prod` |
 
-### Frontend
+**Concurrent-spawn model**
 
-| Script                | Description                              |
-|-----------------------|------------------------------------------|
-| `npm run dev`         | Dev server (Vite)                        |
-| `npm run build`       | Type-check + production build            |
-| `npm run preview`     | Preview production build                 |
-| `npm test`            | Run tests (Vitest)                       |
-| `npm run lint`        | Type-check (`tsc --noEmit`)              |
+- **Windows (`*.ps1`)** uses `Start-Process -NoNewWindow` so all children share the parent's console; Windows broadcasts Ctrl+C to attached processes natively. The `[Console]::CancelKeyPress` handler waits 200ms to let that broadcast settle, then `taskkill /F /T` reaps any orphaned `npm.cmd` / `tsx watch` / `vite` child processes. Port-scrub (`Get-NetTCPConnection` + `Stop-Process`) runs as belt-and-suspenders.
+- **Linux/macOS (`*.sh`)** uses shell **process substitution** (`&> >(sed ...)`), keeping `$!` as the literal `npm` PID (not a subshell wrapper) so `kill -TERM` targets it directly. `trap cleanup INT TERM` sends SIGTERM, waits 300ms, then SIGKILLs stragglers and `lsof`-scrubs the dev ports as belt-and-suspenders.
 
-### Tests
+**Auto-install on first run.** Both scripts check `backend/`, `frontend/`, and `tests/` for `node_modules/`. Any missing subproject gets `npm install --no-audit --no-fund`, and if `tests/` was missing the Playwright Chromium binary is downloaded too. Re-running is a no-op when everything is already installed.
 
-| Script                | Description                              |
-|-----------------------|------------------------------------------|
-| `npm test`            | Run all E2E specs (headless)             |
-| `npm run test:headed` | Run with visible browser                 |
-| `npm run test:ui`     | Playwright UI mode                       |
-| `npm run report`      | Show HTML report                         |
+**Shared env (`HOST=127.0.0.1`, `FRONTEND_URL=http://127.0.0.1:5173`, `ENABLE_TEST_ROUTES`, dummy OAuth/JWT) — three files, one source of truth:**
+
+| File                         | Consumed by                                                     |
+|------------------------------|------------------------------------------------------------------|
+| `scripts/test-env.cjs`        | `tests/playwright.config.ts` (CommonJS `require` — must stay CJS) |
+| `scripts/test-env.ps1`        | `scripts/dev.ps1` and `scripts/prod.ps1` (dot-sourced)          |
+| `scripts/test-env.sh`         | `scripts/dev.sh` and `scripts/prod.sh` (sourced via `.`)         |
+
+If you ever change the values, update all three files. The `KEEP IN SYNC` comment at the top of every variant spells out the relationship.
+
+### How `dev` and `prod` differ
+
+| Aspect               | `dev` (TEST)                                  | `prod` (PROD)                              |
+|----------------------|-----------------------------------------------|-------------------------------------------|
+| Auth source          | Dummy OAuth via `/api/test/login`             | Real Google OAuth (`backend/.env`)        |
+| `ENABLE_TEST_ROUTES` | `1`                                           | unset (routes 404)                        |
+| `JWT_SECRET`         | Hardcoded dev value                            | Whatever is in `backend/.env`             |
+| Source of secrets    | `scripts/test-env.{ps1,sh}` (overlay)         | `backend/.env` (real values)              |
+| When to use          | Day-to-day dev, E2E tests                     | Production-like smoke testing             |
+
+### Cross-platform notes
+
+- **`dev.ps1` / `prod.ps1` are Windows-only.** Each detects non-Windows at startup and exits 1 with a hint to use the `.sh` sibling. This is intentional — the scripts depend on `taskkill.exe` and `Get-NetTCPConnection`.
+- **`dev.sh` / `prod.sh` require bash 4+** for process substitution (`&> >(...)`). macOS's default bash 3.2 won't work — process substitution is a parse-time feature, so invoking through `bash scripts/dev.sh` won't help either. Install bash 4+ from Homebrew (`brew install bash`) so `/opt/homebrew/bin/bash` is on your PATH, then re-run via `bash scripts/dev.sh`.
 
 ## API
 

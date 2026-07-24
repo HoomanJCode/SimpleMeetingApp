@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
+// IMPORTANT: this `require` works because tests/tsconfig.json declares
+// `module: commonjs`. If that ever changes to ESM, this file will silently
+// load TEST_ENV as undefined and tests will run without their env overlay —
+// update both files together if you swap module systems.
+const TEST_ENV = require('../scripts/test-env.cjs').all;
 
 export default defineConfig({
   testDir: './e2e',
@@ -37,6 +42,7 @@ export default defineConfig({
 
   // Auto-start backend + frontend. Both bind to 127.0.0.1 to avoid
   // IPv4/IPv6 mismatches on Windows (Node 17+ resolves localhost → ::1).
+  // Test env is sourced from scripts/test-env.cjs (single source of truth).
   webServer: [
     {
       command: 'npm run dev',
@@ -46,13 +52,7 @@ export default defineConfig({
       cwd: path.resolve(__dirname, '../backend'),
       env: {
         ...process.env,
-        ENABLE_TEST_ROUTES: '1',
-        GOOGLE_CLIENT_ID: 'test-google-client-id',
-        GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
-        GOOGLE_REDIRECT_URI: 'http://localhost:3001/api/auth/google/callback',
-        JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
-        FRONTEND_URL: 'http://127.0.0.1:5173',
-        HOST: '127.0.0.1',
+        ...TEST_ENV,
       },
     },
     {

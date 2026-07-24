@@ -8,7 +8,7 @@ import {
   getMeetings,
   getMeetingById,
   updateMeeting,
-  deleteMeeting,
+  cancelMeeting,
   joinMeeting,
   leaveMeeting,
   getParticipants,
@@ -94,13 +94,14 @@ meetingRouter.put(
 );
 
 /**
- * DELETE /meetings/:id
- * Protected: deletes meeting (host only).
+ * POST /meetings/:id/cancel
+ * Protected: cancels a meeting (host only). Sets status to 'cancelled'.
+ * Meetings are never permanently deleted.
  */
-meetingRouter.delete('/:id', authenticate, (req: Request, res: Response) => {
+meetingRouter.post('/:id/cancel', authenticate, (req: Request, res: Response) => {
   const id = req.params.id as string;
-  deleteMeeting(id, req.user!.id);
-  res.status(204).send();
+  const meeting = cancelMeeting(id, req.user!.id);
+  res.json(meeting);
 });
 
 /**

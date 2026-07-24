@@ -1,0 +1,24 @@
+{
+  "name": "irmeeting-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "IrMeetingApp - tech meetup discovery platform (root orchestrator scripts)",
+  "scripts": {
+    "dev:ps": "pwsh -NoProfile -File scripts/dev.ps1",
+    "dev:sh": "bash scripts/dev.sh",
+    "prod:ps": "pwsh -NoProfile -File scripts/prod.ps1",
+    "prod:sh": "bash scripts/prod.sh",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "preview": "npm run preview --prefix frontend",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "npm run test --prefix backend && npm run test --prefix frontend",
+    "test:be": "npm run test --prefix backend",
+    "test:fe": "npm run test --prefix frontend",
+    "test:e2e": "npm run test --prefix tests",
+    "test:e2e:headed": "npm run test:headed --prefix tests",
+    "test:e2e:ui": "npm run test:ui --prefix tests",
+    "test:e2e:report": "npm run report --prefix tests"
+  }
+}

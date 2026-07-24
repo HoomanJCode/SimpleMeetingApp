@@ -3,10 +3,41 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/authenticate';
 import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rateLimiter';
-import { getGoogleAuthUrl, handleGoogleCallback, refreshAccessToken } from '../services/authService';
+import { getGoogleAuthUrl, handleGoogleCallback, refreshAccessToken, loginWithEmailPassword } from '../services/authService';
 import { getEnv } from '../config/env';
 
 export const authRouter = Router();
+
+/**
+ * GET /auth/method
+ * Returns the configured auth method so the frontend can decide which
+ * login UI to show (Google OAuth redirect vs email/password form).
+ */
+authRouter.get('/method', (_req: Request, res: Response) => {
+  const env = getEnv();
+  res.json({ method: env.AUTH_METHOD });
+});
+
+/**
+ * POST /auth/login
+ * Email/password login. Only available when AUTH_METHOD=userpass.
+ * Auto-registers new users on first login.
+ */
+authRouter.post(
+  '/login',
+  authLimiter,
+  validate({
+    body: z.object({
+      email: z.string().email('Valid email is required'),
+      password: z.string().min(1, 'Password is required'),
+    }),
+  }),
+  (req: Request, res: Response) => {
+    const { email, password } = req.body as { email: string; password: string };
+    const tokens = loginWithEmailPassword(email, password);
+    res.json(tokens);
+  }
+);
 
 /**
  * GET /auth/google

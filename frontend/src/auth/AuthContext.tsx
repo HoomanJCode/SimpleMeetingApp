@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import type { User, AuthTokens } from '../types';
-import { getCurrentUser } from '../api/auth';
+import { getCurrentUser, getAuthMethod, loginWithPassword } from '../api/auth';
 import { configureApiClient } from '../api/client';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
+  authMethod: 'google' | 'userpass' | null;
   login: () => void;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => void;
   getToken: () => string | null;
   setTokens: (tokens: AuthTokens) => void;
@@ -38,6 +40,7 @@ function persistTokens(access: string | null, refresh: string | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authMethod, setAuthMethod] = useState<'google' | 'userpass' | null>(null);
 
   const getToken = useCallback(() => accessToken, []);
   const getRefreshToken = useCallback(() => refreshTokenValue, []);
@@ -73,8 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(() => {
+    if (authMethod === 'userpass') {
+      // Handled by the Header component showing the LoginModal
+      return;
+    }
     window.location.href = '/api/auth/google';
-  }, []);
+  }, [authMethod]);
+
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    const tokens = await loginWithPassword(email, password);
+    accessToken = tokens.accessToken;
+    refreshTokenValue = tokens.refreshToken;
+    persistTokens(tokens.accessToken, tokens.refreshToken);
+    await refreshUser();
+  }, [refreshUser]);
 
   const logout = useCallback(() => {
     accessToken = null;
@@ -84,9 +99,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/';
   }, []);
 
-  // Wire API client and restore session (must be a single effect to guarantee order)
+  // Wire API client, fetch auth method, and restore session
   useEffect(() => {
     configureApiClient(getToken, getRefreshToken, setTokens, logout);
+
+    // Check Vite env var first (available immediately, no network needed).
+    // Falls back to backend API call only if the Vite var is not set.
+    const viteMethod = import.meta.env.VITE_AUTH_METHOD;
+    if (viteMethod === 'userpass' || viteMethod === 'google') {
+      setAuthMethod(viteMethod);
+    } else {
+      getAuthMethod()
+        .then((res) => setAuthMethod(res.method))
+        .catch(() => setAuthMethod('google'));
+    }
 
     if (getRefreshToken()) {
       refreshUser().finally(() => setIsLoading(false));
@@ -97,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, logout, getToken, setTokens, refreshUser }}
+      value={{ user, isLoading, authMethod, login, loginWithEmail, logout, getToken, setTokens, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

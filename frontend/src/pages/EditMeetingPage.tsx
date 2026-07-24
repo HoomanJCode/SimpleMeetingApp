@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MeetingForm } from '../components/meeting/MeetingForm';
-import { useMeeting, useUpdateMeeting, useDeleteMeeting } from '../hooks/useMeetings';
+import { useMeeting, useUpdateMeeting, useCancelMeeting } from '../hooks/useMeetings';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Spinner } from '../components/ui/Spinner';
@@ -16,11 +16,12 @@ export default function EditMeetingPage() {
   const navigate = useNavigate();
   const { meeting, isLoading, error: loadError } = useMeeting(id);
   const { update, isLoading: isSaving } = useUpdateMeeting();
-  const { remove, isLoading: isDeleting } = useDeleteMeeting();
+  const { cancel, isLoading: isCancelling } = useCancelMeeting();
   const { toast } = useToast();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const submittedRef = useRef(false);
 
   useBeforeUnload(isDirty);
   useDocumentTitle(meeting ? `Edit ${meeting.title}` : 'Edit Meeting');
@@ -38,7 +39,9 @@ export default function EditMeetingPage() {
     try {
       await update(id!, data);
       toast('Meeting updated successfully!', 'success');
-      navigate(`/meetings/${id}`);
+      submittedRef.current = true;
+      setIsDirty(false);
+      setTimeout(() => navigate(`/meetings/${id}`), 0);
     } catch (err: any) {
       const msg = err.message || 'Failed to update meeting';
       setError(msg);
@@ -46,13 +49,13 @@ export default function EditMeetingPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleCancel = async () => {
     try {
-      await remove(id!);
-      toast('Meeting deleted successfully!', 'success');
-      navigate('/', { replace: true });
+      await cancel(id!);
+      toast('Meeting cancelled.', 'info');
+      navigate(`/meetings/${id}`);
     } catch (err: any) {
-      toast(err.message || 'Failed to delete meeting', 'error');
+      toast(err.message || 'Failed to cancel meeting', 'error');
     }
   };
 
@@ -68,8 +71,8 @@ export default function EditMeetingPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Meeting</h1>
-        <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
-          Delete Meeting
+        <Button variant="danger" size="sm" onClick={() => setShowCancelModal(true)}>
+          Cancel Meeting
         </Button>
       </div>
 
@@ -82,20 +85,20 @@ export default function EditMeetingPage() {
         onDirtyChange={setIsDirty}
       />
 
-      <NavigationBlocker when={isDirty} />
+      <NavigationBlocker when={isDirty && !submittedRef.current} />
 
       <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Meeting"
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Meeting"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-            <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>Delete</Button>
+            <Button variant="secondary" onClick={() => setShowCancelModal(false)}>Keep Meeting</Button>
+            <Button variant="danger" onClick={handleCancel} isLoading={isCancelling}>Cancel Meeting</Button>
           </>
         }
       >
-        <p className="text-gray-600 dark:text-gray-300">Are you sure you want to delete this meeting? This action cannot be undone.</p>
+        <p className="text-gray-600 dark:text-gray-300">Are you sure you want to cancel this meeting? Participants will be notified.</p>
       </Modal>
     </div>
   );

@@ -19,11 +19,13 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose; // always current, never triggers re-renders
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -50,26 +52,22 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         }
       }
     },
-    [onClose]
+    [] // stable — reads onClose via ref
   );
 
   useEffect(() => {
     if (isOpen) {
-      // Save the trigger element only on the initial open, not on effect re-runs
       previousFocusRef.current = previousFocusRef.current ?? (document.activeElement as HTMLElement | null);
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
-      // Move focus into the dialog when it opens
       dialogRef.current?.focus();
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      // Restore focus to the element that triggered the modal
       if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
         previousFocusRef.current.focus();
       }
-      // Reset for next open so it captures the new trigger
       previousFocusRef.current = null;
     };
   }, [isOpen, handleKeyDown]);
@@ -87,14 +85,14 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto outline-none"
+        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto outline-none transition-colors"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 id={titleId} className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -102,7 +100,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
           </button>
         </div>
         <div className="px-6 py-4">{children}</div>
-        {footer && <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-200">{footer}</div>}
+        {footer && <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700">{footer}</div>}
       </div>
     </div>
   );

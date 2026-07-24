@@ -51,8 +51,8 @@ export function updateMeeting(id: string, data: UpdateMeetingInput): Promise<Mee
   return api.put<Meeting>(`/meetings/${id}`, data);
 }
 
-export function deleteMeeting(id: string): Promise<void> {
-  return api.delete<void>(`/meetings/${id}`);
+export function cancelMeeting(id: string): Promise<Meeting> {
+  return api.post<Meeting>(`/meetings/${id}/cancel`);
 }
 
 export function joinMeeting(id: string): Promise<{ message: string; participantCount: number }> {
