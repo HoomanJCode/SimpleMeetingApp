@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MeetingForm } from '../components/meeting/MeetingForm';
 import { useMeeting, useUpdateMeeting, useDeleteMeeting } from '../hooks/useMeetings';
@@ -21,6 +21,7 @@ export default function EditMeetingPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const submittedRef = useRef(false);
 
   useBeforeUnload(isDirty);
   useDocumentTitle(meeting ? `Edit ${meeting.title}` : 'Edit Meeting');
@@ -38,7 +39,9 @@ export default function EditMeetingPage() {
     try {
       await update(id!, data);
       toast('Meeting updated successfully!', 'success');
-      navigate(`/meetings/${id}`);
+      submittedRef.current = true;
+      setIsDirty(false);
+      setTimeout(() => navigate(`/meetings/${id}`), 0);
     } catch (err: any) {
       const msg = err.message || 'Failed to update meeting';
       setError(msg);
@@ -82,7 +85,7 @@ export default function EditMeetingPage() {
         onDirtyChange={setIsDirty}
       />
 
-      <NavigationBlocker when={isDirty} />
+      <NavigationBlocker when={isDirty && !submittedRef.current} />
 
       <Modal
         isOpen={showDeleteModal}
