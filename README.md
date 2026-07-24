@@ -41,6 +41,11 @@ IrMeetingApp/
 │   ├── e2e/          # Spec files (auth, meetings, participants, realtime)
 │   ├── fixtures/     # Test users + meeting templates
 │   └── helpers/      # loginAs, authedFetch, resetDb
+├── scripts/          # Cross-platform dev/test helpers
+│   ├── *.ps1         # PowerShell variants (Windows)
+│   ├── *.sh          # Bash variants (Linux / macOS)
+│   ├── test-env.cjs  # (kept for tests/playwright.config.ts via require)
+│   └── README-of-things... # see "Scripts Reference" below
 ├── documents/        # Architecture & design docs
 └── todos/            # Implementation task lists
 ```
@@ -50,35 +55,65 @@ IrMeetingApp/
 ### Prerequisites
 
 - Node.js 20+
+- PowerShell 5.1+ on Windows (any Linux/macOS bash 3+ for non-Windows users)
+- One port-killing tool of `lsof`, `fuser` (psmisc), or `ss` (iproute2) — the kill-servers script auto-falls-back through these. (PowerShell uses the built-in `Get-NetTCPConnection` instead.)
 - (Production only) A Google Cloud Console project with OAuth 2.0 credentials
   - Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
 
 ### One-command setup + run
 
-From the project root:
+From the project root, in **two** steps:
 
 ```bash
-npm run setup    # installs all deps (backend, frontend, tests, root orchestrator)
-npm run dev      # starts backend + frontend in TEST mode (dummy OAuth, /api/test/* routes live)
+npm run setup     # installs all deps (root + backend + frontend + tests) + Playwright
 ```
+
+Then start backend + frontend in **TEST mode** with the **platform-native script** for your shell:
+
+**Windows (PowerShell 5.1+ or PowerShell 7+):**
+```powershell
+pwsh -NoProfile -File scripts/dev.ps1
+```
+
+**Linux / macOS (bash):**
+```bash
+bash scripts/dev.sh
+```
+
+> Tip: `package.json` exposes convenience npm aliases `npm run dev:ps` and
+> `npm run dev:sh` that wrap the same PowerShell / Bash commands, so you can
+> stay in the `npm run X` vocabulary if you prefer. The platform-specific
+> aliases (`npm run dev:be`, `npm run dev:real`, etc.) follow the same pattern.
 
 Open [http://localhost:5173](http://localhost:5173). In test mode, log in by visiting any URL like
 `http://localhost:5173/auth/callback?token=…` — see `tests/helpers/auth.ts` for how the test helpers
 mint tokens, or call `POST /api/test/login` manually (body: `{id, email, name}`).
 
-To stop both servers cleanly: `Ctrl+C` in the terminal that ran `npm run dev`. If a hard kill left
-ports 3001/5173 held by zombie processes, run `npm run kill`.
+To stop both servers cleanly: `Ctrl+C` in the terminal that ran the script. If a hard kill left
+ports 3001/5173 held by zombie processes, run `pwsh -File scripts/kill-servers.ps1` (Windows) or
+`bash scripts/kill-servers.sh` (Linux/macOS).
 
 ### Production-like mode (real Google OAuth)
 
-If you have (or want to set up) real Google OAuth credentials, just run `npm run dev:real`.
-If `backend/.env` doesn't exist yet, the runner auto-detects that and launches
-`npm run env:wizard` first, then continues into REAL mode once your answers are saved.
+If you have (or want to set up) real Google OAuth credentials, pass `--real`:
+
+**Windows:**
+```powershell
+pwsh -NoProfile -File scripts/dev.ps1 --real
+```
+
+**Linux / macOS:**
+```bash
+bash scripts/dev.sh --real
+```
+
+If `backend/.env` doesn't exist yet, the orchestrator auto-detects that and launches
+`scripts/env-wizard.ps1`/`.sh` first, then continues into REAL mode once your answers are saved.
 
 ```bash
-npm run dev:real   # backend reads .env, test routes are disabled
-# — or, equivalently, if you want to set up. env in isolation first:
-npm run env:wizard   # walks you through every variable, validates input, generates a JWT_SECRET
+# Or run the wizard on its own to set up .env in isolation:
+pwsh -File scripts/env-wizard.ps1   # Windows
+bash  scripts/env-wizard.sh         # Linux/macOS
 ```
 
 Both flows land you in the same place: a normal `backend/.env` written with owner-only
@@ -89,16 +124,14 @@ APIs & Services → Credentials → Web app, with redirect URI
 
 Behavior of the auto-wizard check depends on whether stdin is an interactive TTY:
 
-| Context                                  | What `npm run dev:real` does                                                                 |
-|------------------------------------------|------------------------------------------------------------------------------------------------|
-| `backend/.env` exists                    | Boots straight into REAL mode.                                                                |
-| `backend/.env` missing, interactive TTY  | Launches `npm run env:wizard` inline, waits, then boots once `.env` is saved.                 |
-| `backend/.env` missing, CI / piped       | Exits 1 with a clear hint to run `npm run env:wizard` first or pass `--no-wizard + .env handled by your deploy script`. |
-| `backend/.env` missing, `--no-wizard`    | Exits 1 (the flag suppresses auto-launch but still demands the file for safe_backend startup). |
+| Context                                  | What `dev --real` does                                                                  |
+|------------------------------------------|------------------------------------------------------------------------------------------|
+| `backend/.env` exists                    | Boots straight into REAL mode.                                                          |
+| `backend/.env` missing, interactive TTY  | Launches the env-wizard inline, waits, then boots once `.env` is saved.                 |
+| `backend/.env` missing, CI / piped       | Exits 1 with a clear hint to run the env-wizard first or pass `--no-wizard` and let your deploy script create `.env`. |
+| `backend/.env` missing, `--no-wizard`    | Exits 1 (the flag suppresses auto-launch but still demands the file for safe backend startup). |
 
-Cross-platform: the check uses `process.stdin.isTTY` and Node's built-in
-`child_process.spawnSync({ stdio: 'inherit' })`, which identify and reuse the real
-terminal identically on Windows, macOS, and Linux.
+Cross-platform: both scripts use the same detection pattern — PowerShell reads `[Console]::IsInputRedirected`, Bash reads `[ -t 0 ]` — and `child_process.spawnSync` / process substitution handle the underlying fork identically across OSes.
 
 ### Manual per-subproject setup (legacy)
 
@@ -138,7 +171,7 @@ npm run test:e2e:ui    # Playwright with the UI runner (interactive)
 
 The E2E suite auto-starts both servers via the `webServer` config in
 `tests/playwright.config.ts`, using the same test env (`scripts/test-env.cjs`) as
-`npm run dev`. No real Google OAuth credentials are needed — tests pump tokens
+`scripts/dev.{ps1,sh}`. No real Google OAuth credentials are needed — tests pump tokens
 through the dev-only `/api/test/login` endpoint.
 
 ### What gets tested where
@@ -168,50 +201,51 @@ through the dev-only `/api/test/login` endpoint.
 
 ## Scripts Reference
 
-### Root orchestrator (run from project root)
+There are two equivalent scripts for every workflow — one PowerShell (`.ps1`, Windows) and one Bash (`.sh`, Linux/macOS). The `package.json` exposes convenience `npm run X:ps` / `npm run X:sh` aliases that wrap the matching script, so you can stay in `npm` vocabulary if preferred.
 
-These scripts coordinate the three subprojects. They are the recommended way to work
-with the codebase day-to-day — use the manual per-folder scripts below only when you need
-to debug a single piece in isolation.
+### Root orchestrator
 
-| Script                     | Description                                                                                          |
-|----------------------------|------------------------------------------------------------------------------------------------------|
-| `npm run setup`            | Install deps for root + backend + frontend + tests; install Playwright Chromium                       |
-| `npm run dev`              | Start backend + frontend concurrently in TEST mode (dummy OAuth, `/api/test/*` enabled)              |
-| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes). If `.env` is missing AND stdin is a TTY, auto-launches `env:wizard` first. To skip the check in CI / Docker: <br>`npm run dev:real -- --no-wizard` |
-| `npm run dev:be`           | Start only the backend (test mode)                                                                   |
-| `npm run dev:fe`           | Start only the frontend                                                                              |
-| `npm run kill`             | Free ports 3001 + 5173 (kills zombie node.exe after interrupted runs)                                |
-| `npm run db:reset`         | Delete the SQLite DB file; next backend start recreates + migrates + seeds                           |
-| `npm run db:seed`          | Print info about when seed runs (seed is automatic on first boot of a fresh DB)                      |
-| `npm run db:path`          | Print absolute path of the SQLite file                                                               |
-| `npm run env:wizard`      | Interactive wizard to create `backend/.env` for `dev:real` mode (validates input, generates JWT)      |
-| `npm run lint`             | Type-check both backend + frontend                                                                   |
-| `npm run build`            | Build backend (`tsc`) + frontend (`tsc -b && vite build`)                                            |
-| `npm run start`            | Run the production backend (assumes you've already built; serves frontend `dist/`)                   |
-| `npm run preview`          | Preview the production frontend build                                                                |
-| `npm test`                 | Run ALL tests (backend unit + frontend unit + E2E)                                                   |
-| `npm run test:unit`        | Run backend + frontend unit tests (Vitest) only                                                      |
-| `npm run test:be`          | Backend unit tests only                                                                              |
-| `npm run test:fe`          | Frontend unit tests only                                                                             |
-| `npm run test:e2e`         | Playwright E2E (headless)                                                                            |
-| `npm run test:e2e:headed`  | Playwright with visible browser                                                                      |
-| `npm run test:e2e:ui`      | Playwright UI mode                                                                                   |
-| `npm run test:e2e:report`  | Open the last HTML report (`playwright show-report`)                                                 |
-| `npm run clean`            | Remove `dist/`, `test-results/`, `playwright-report/` (preserves DB and node_modules)                |
+Run scripts directly for the lowest-latency invocation, or `npm run <name>:ps`/`:sh` for the npm-alias path.
+
+| Windows (PowerShell)                                       | Linux / macOS (Bash)                                | Description                                                                                                       |
+|------------------------------------------------------------|-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `pwsh -File scripts/dev.ps1`                               | `bash scripts/dev.sh`                               | Start backend + frontend in TEST mode.                                                                            |
+| `pwsh -File scripts/dev.ps1 --real`                        | `bash scripts/dev.sh --real`                        | Same but backend reads `backend/.env` (real Google OAuth). Auto-launches env-wizard if missing + TTY.             |
+| `pwsh -File scripts/dev.ps1 --be`                          | `bash scripts/dev.sh --be`                          | Backend only.                                                                                                      |
+| `pwsh -File scripts/dev.ps1 --fe`                          | `bash scripts/dev.sh --fe`                          | Frontend only.                                                                                                    |
+| `pwsh -File scripts/dev.ps1 --real --no-wizard`            | `bash scripts/dev.sh --real --no-wizard`            | Skip auto-wizard in `--real` (for CI / Docker / deploy scripts that create `.env` themselves).                    |
+| `pwsh -File scripts/kill-servers.ps1`                      | `bash scripts/kill-servers.sh`                      | Free ports 3001 + 5173 (reaps zombies from interrupted runs). Idempotent.                                          |
+| `pwsh -File scripts/db.ps1 reset`                          | `bash scripts/db.sh reset`                          | Wipe SQLite DB; next backend start re-runs migrations + first-boot seed.                                          |
+| `pwsh -File scripts/db.ps1 seed`                           | `bash scripts/db.sh seed`                           | Info on when seeding runs (seed is automatic on first boot of a fresh DB).                                        |
+| `pwsh -File scripts/db.ps1 path`                           | `bash scripts/db.sh path`                           | Print absolute DB path.                                                                                           |
+| `pwsh -File scripts/env-wizard.ps1`                         | `bash scripts/env-wizard.sh`                        | Interactive wizard creating `backend/.env` for `--real` mode. Validates input, generates JWT_SECRET.              |
+| `pwsh -File scripts/clean.ps1`                             | `bash scripts/clean.sh`                             | Remove `dist/`, `test-results/`, `playwright-report/` (preserves DB and `node_modules`).                            |
+| *(none)*                                                    | *(none)*                                            | `scripts/test-env.{ps1,sh}` — dot-sourced by env-wizard + dev. Not invoked directly.                              |
+| *(none)*                                                    | *(none)*                                            | `scripts/test-env.cjs` — consumed by `tests/playwright.config.ts` via `require()` (CommonJS). Stay-in-sync with the `.ps1` and `.sh` siblings; comment block at the top of each spells out the relationship. |
 
 #### How `dev`/`dev:real` differ
 
-| Aspect              | `npm run dev`                          | `npm run dev:real`                       |
-|---------------------|----------------------------------------|------------------------------------------|
-| Auth source         | Dummy OAuth via `/api/test/login`      | Real Google OAuth (`backend/.env`)       |
-| `ENABLE_TEST_ROUTES`| `1`                                    | unset (routes 404)                       |
-| `JWT_SECRET`        | Hardcoded dev value                     | Whatever is in `backend/.env`           |
-| When to use         | Day-to-day dev, E2E tests              | Production-like smoke testing            |
+| Aspect              | default (`--no-real` / no flag)               | `--real`                                  |
+|---------------------|-----------------------------------------------|-------------------------------------------|
+| Auth source         | Dummy OAuth via `/api/test/login`             | Real Google OAuth (`backend/.env`)        |
+| `ENABLE_TEST_ROUTES`| `1`                                           | unset (routes 404)                        |
+| `JWT_SECRET`        | Hardcoded dev value                            | Whatever is in `backend/.env`             |
+| When to use         | Day-to-day dev, E2E tests                     | Production-like smoke testing             |
 
-The shared values (HOST=127.0.0.1, FRONTEND_URL=http://127.0.0.1:5173) come from
-`scripts/test-env.cjs`, which is also imported by `tests/playwright.config.ts` — so
-running E2E tests and the dev server never drift out of sync.
+**Concurrent-spawn model**
+
+- **Windows (`dev.ps1`)** uses `Start-Process -NoNewWindow` so all children share the parent's console; Windows broadcasts Ctrl+C to attached processes natively. The `[Console]::CancelKeyPress` handler waits 200ms to let that broadcast settle, then `taskkill /F /T` reaps any orphaned `npm.cmd` / `tsx watch` / `vite` child processes.
+- **Linux/macOS (`dev.sh`)** uses shell **process substitution** (`&> >(sed ...)`), keeping `$!` as the literal `npm` PID (not a subshell wrapper) so `kill -TERM` targets it directly. `trap cleanup INT TERM EXIT` sends SIGTERM, waits 300ms, then SIGKILLs stragglers and lsof-scrubs the dev ports as belt-and-suspenders.
+
+**Shared env (HOST=127.0.0.1, FRONTEND_URL=http://127.0.0.1:5173, ENABLE_TEST_ROUTES, dummy OAuth/JWT) — three files, one source of truth:**
+
+| File                         | Consumed by                                                     |
+|------------------------------|------------------------------------------------------------------|
+| `scripts/test-env.cjs`        | `tests/playwright.config.ts` (CommonJS `require` — must stay CJS) |
+| `scripts/test-env.ps1`        | `scripts/dev.ps1` and `scripts/env-wizard.ps1` (dot-sourced)     |
+| `scripts/test-env.sh`         | `scripts/dev.sh` and `scripts/env-wizard.sh` (sourced via `.`)   |
+
+If you ever change the values, update all three files. The `KEEP IN SYNC` comment at the top of every variant spells out the relationship.
 
 ### Backend (`cd backend`)
 
@@ -241,6 +275,14 @@ running E2E tests and the dev server never drift out of sync.
 | `npm run test:headed` | Run with visible browser                 |
 | `npm run test:ui`     | Playwright UI mode                       |
 | `npm run report`      | Show HTML report                         |
+
+### Cross-platform notes
+
+- **`dev.ps1` is Windows-only.** It detects non-Windows at startup and exits 1 with a hint to use `dev.sh`. This is intentional — the script depends on `taskkill.exe` and `Get-NetTCPConnection`.
+- **`dev.sh` requires bash 4+** for process substitution (`> >(...)`). macOS's default bash 3.2 won't work; either install bash from Homebrew (`brew install bash`) or run via `bash scripts/dev.sh` directly.
+- **`kill-servers.ps1`** uses PowerShell's built-in `Get-NetTCPConnection` (PS 5.1+) and `Stop-Process`. Works with no extra dependencies.
+- **`kill-servers.sh`** auto-falls back through `lsof` → `fuser` → `ss` so most Linux distros (including minimal Alpine) work out of the box. If none of those are installed, the script exits 1 instead of silently half-succeeding.
+- **Both `kill-servers.*`** are idempotent: "was already free" is the success message when nothing is bound.
 
 ## API
 
