@@ -28,7 +28,7 @@ param()
 $ErrorActionPreference = 'Stop'
 
 if ($env:OS -ne 'Windows_NT') {
-    Write-Host '✗ scripts/prod.ps1 is Windows-only. Use scripts/prod.sh on Linux/macOS.' -ForegroundColor Red
+    Write-Host 'X scripts/prod.ps1 is Windows-only. Use scripts/prod.sh on Linux/macOS.' -ForegroundColor Red
     exit 1
 }
 
@@ -57,19 +57,19 @@ foreach ($sub in @('backend','frontend','tests')) {
     }
 }
 if ($missing.Count -gt 0) {
-    Write-Host ('▶ Installing missing dependencies: ' + ($missing -join ', ')) -ForegroundColor Yellow
+    Write-Host ('> Installing missing dependencies: ' + ($missing -join ', ')) -ForegroundColor Yellow
     foreach ($sub in $missing) {
         Push-Location (Join-Path $Root $sub)
         try {
             & npm install --no-audit --no-fund
             if ($LASTEXITCODE -ne 0) {
-                Write-Host ('  ✗ npm install in ' + $sub + ' failed (exit ' + $LASTEXITCODE + ')') -ForegroundColor Red
+                Write-Host ('  X npm install in ' + $sub + ' failed (exit ' + $LASTEXITCODE + ')') -ForegroundColor Red
                 exit $LASTEXITCODE
             }
         } finally { Pop-Location }
     }
     if ($missing -contains 'tests') {
-        Write-Host '▶ Installing Playwright Chromium (browser binary)...' -ForegroundColor Yellow
+        Write-Host '> Installing Playwright Chromium (browser binary)...' -ForegroundColor Yellow
         Push-Location (Join-Path $Root 'tests')
         try {
             & npx --no-install playwright install chromium
@@ -132,7 +132,7 @@ function Ask {
         if ($null -ne $Validator) {
             $err = & $Validator $value
             if ($err) {
-                Write-Host "  ✗ $err" -ForegroundColor Red
+                Write-Host "  X $err" -ForegroundColor Red
                 if ($i + 1 -ge $MaxAttempts) {
                     Write-Host "  (gave up after $MaxAttempts attempts; re-run prod to retry)" -ForegroundColor Yellow
                     return $value
@@ -148,7 +148,7 @@ function Ask {
 # ---- backend/.env check + inline wizard -----------------------------
 if (-not (Test-Path $EnvPath)) {
     if (-not $IsInteractive) {
-        Write-Host '✗ backend/.env not found.' -ForegroundColor Red
+        Write-Host 'X backend/.env not found.' -ForegroundColor Red
         Write-Host '  Production mode needs a real .env file. This run is non-interactive' -ForegroundColor Red
         Write-Host '  (CI / piped), so the wizard cannot run. Two paths:' -ForegroundColor Red
         Write-Host ''
@@ -159,7 +159,7 @@ if (-not (Test-Path $EnvPath)) {
         exit 1
     }
 
-    Write-Host '▶ backend/.env not found - launching inline .env setup.' -ForegroundColor Cyan
+    Write-Host '> backend/.env not found - launching inline .env setup.' -ForegroundColor Cyan
     Write-Host ''
     Write-Host '  Production mode needs real values (Google OAuth credentials, JWT_SECRET, etc).' -ForegroundColor Cyan
     Write-Host '  Press <Enter> to accept any default. JWT_SECRET can be auto-generated.' -ForegroundColor DarkGray
@@ -171,7 +171,7 @@ if (-not (Test-Path $EnvPath)) {
 
     # Overwrite guard - never destroy a real .env silently.
     if (Test-Path $EnvPath) {
-        Write-Host ('  · ' + (Get-CwdRelative $EnvPath) + ' already exists.') -ForegroundColor Yellow
+        Write-Host ('  * ' + (Get-CwdRelative $EnvPath) + ' already exists.') -ForegroundColor Yellow
         $overwrite = Ask '  Overwrite? (y/N)' 'N' { param($v)
             if ($v -match '^(y|yes|n|no)$') { return $null } else { return 'answer with y or n' }
         }
@@ -215,36 +215,36 @@ if (-not (Test-Path $EnvPath)) {
     $out['HOST'] = Ask 'HOST' '127.0.0.1'
 
     Write-Host ''
-    Write-Host '  ┌─────────────────────────────────────────────────────────────────┐' -ForegroundColor DarkGray
-    Write-Host '  │  Google OAuth credentials - where to get them                   │' -ForegroundColor DarkGray
-    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
-    Write-Host '  │  Full step-by-step walkthrough with exact field names:           │' -ForegroundColor DarkGray
-    Write-Host '  │      documents/google-oauth-setup.md                            │' -ForegroundColor DarkGray
-    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
-    Write-Host '  │  Quick version:                                                 │' -ForegroundColor DarkGray
-    Write-Host '  │    1. https://console.cloud.google.com   (sign in with Gmail)   │' -ForegroundColor DarkGray
-    Write-Host '  │    2. Top bar -> Select a project -> New project                │' -ForegroundColor DarkGray
-    Write-Host '  │         (e.g. ''IrMeetingApp Local'') -> Create                   │' -ForegroundColor DarkGray
-    Write-Host '  │    3. APIs & Services -> OAuth consent screen                   │' -ForegroundColor DarkGray
-    Write-Host '  │         -> External -> Create                                   │' -ForegroundColor DarkGray
-    Write-Host '  │         -> App name, support email, dev contact -> Save (x2)    │' -ForegroundColor DarkGray
-    Write-Host '  │         -> Test users -> Add YOUR Gmail -> Save and Continue    │' -ForegroundColor DarkGray
-    Write-Host '  │    4. APIs & Services -> Credentials -> Create Credentials      │' -ForegroundColor DarkGray
-    Write-Host '  │         -> OAuth client ID                                      │' -ForegroundColor DarkGray
-    Write-Host '  │         -> Application type: Web application                    │' -ForegroundColor DarkGray
-    Write-Host '  │         -> Authorized redirect URIs:                            │' -ForegroundColor DarkGray
-    Write-Host '  │            http://localhost:3001/api/auth/google/callback       │' -ForegroundColor DarkGray
-    Write-Host '  │         -> Create                                               │' -ForegroundColor DarkGray
-    Write-Host '  │    5. Copy the ''Your Client ID'' and ''Your Client secret''        │' -ForegroundColor DarkGray
-    Write-Host '  │         values from the modal (shown ONLY ONCE).                │' -ForegroundColor DarkGray
-    Write-Host '  │    6. Paste them into the prompts below.                        │' -ForegroundColor DarkGray
-    Write-Host '  │                                                                 │' -ForegroundColor DarkGray
-    Write-Host '  │  Client ID format     : ....apps.googleusercontent.com         │' -ForegroundColor DarkGray
-    Write-Host '  │  Client secret format : GOCSPX-...                              │' -ForegroundColor DarkGray
-    Write-Host '  │  Authorized redirect URI must EXACTLY match the one in          │' -ForegroundColor DarkGray
-    Write-Host '  │  GOOGLE_REDIRECT_URI below (byte-by-byte; no trailing slash,    │' -ForegroundColor DarkGray
-    Write-Host '  │  http≠https, port matters).                                     │' -ForegroundColor DarkGray
-    Write-Host '  └─────────────────────────────────────────────────────────────────┘' -ForegroundColor DarkGray
+    Write-Host '  +-----------------------------------------------------------------+' -ForegroundColor DarkGray
+    Write-Host '  |  Google OAuth credentials - where to get them                   |' -ForegroundColor DarkGray
+    Write-Host '  |                                                                 |' -ForegroundColor DarkGray
+    Write-Host '  |  Full step-by-step walkthrough with exact field names:           |' -ForegroundColor DarkGray
+    Write-Host '  |      documents/google-oauth-setup.md                            |' -ForegroundColor DarkGray
+    Write-Host '  |                                                                 |' -ForegroundColor DarkGray
+    Write-Host '  |  Quick version:                                                 |' -ForegroundColor DarkGray
+    Write-Host '  |    1. https://console.cloud.google.com   (sign in with Gmail)   |' -ForegroundColor DarkGray
+    Write-Host '  |    2. Top bar -> Select a project -> New project                |' -ForegroundColor DarkGray
+    Write-Host '  |         (e.g. ''IrMeetingApp Local'') -> Create                   |' -ForegroundColor DarkGray
+    Write-Host '  |    3. APIs & Services -> OAuth consent screen                   |' -ForegroundColor DarkGray
+    Write-Host '  |         -> External -> Create                                   |' -ForegroundColor DarkGray
+    Write-Host '  |         -> App name, support email, dev contact -> Save (x2)    |' -ForegroundColor DarkGray
+    Write-Host '  |         -> Test users -> Add YOUR Gmail -> Save and Continue    |' -ForegroundColor DarkGray
+    Write-Host '  |    4. APIs & Services -> Credentials -> Create Credentials      |' -ForegroundColor DarkGray
+    Write-Host '  |         -> OAuth client ID                                      |' -ForegroundColor DarkGray
+    Write-Host '  |         -> Application type: Web application                    |' -ForegroundColor DarkGray
+    Write-Host '  |         -> Authorized redirect URIs:                            |' -ForegroundColor DarkGray
+    Write-Host '  |            http://localhost:3001/api/auth/google/callback       |' -ForegroundColor DarkGray
+    Write-Host '  |         -> Create                                               |' -ForegroundColor DarkGray
+    Write-Host '  |    5. Copy the ''Your Client ID'' and ''Your Client secret''        |' -ForegroundColor DarkGray
+    Write-Host '  |         values from the modal (shown ONLY ONCE).                |' -ForegroundColor DarkGray
+    Write-Host '  |    6. Paste them into the prompts below.                        |' -ForegroundColor DarkGray
+    Write-Host '  |                                                                 |' -ForegroundColor DarkGray
+    Write-Host '  |  Client ID format     : ....apps.googleusercontent.com         |' -ForegroundColor DarkGray
+    Write-Host '  |  Client secret format : GOCSPX-...                              |' -ForegroundColor DarkGray
+    Write-Host '  |  Authorized redirect URI must EXACTLY match the one in          |' -ForegroundColor DarkGray
+    Write-Host '  |  GOOGLE_REDIRECT_URI below (byte-by-byte; no trailing slash,    |' -ForegroundColor DarkGray
+    Write-Host '  |  http≠https, port matters).                                     |' -ForegroundColor DarkGray
+    Write-Host '  +-----------------------------------------------------------------+' -ForegroundColor DarkGray
     Write-Host ''
 
     $out['GOOGLE_CLIENT_ID']     = Ask 'GOOGLE_CLIENT_ID (required)' '' { param($v)
@@ -272,7 +272,7 @@ if (-not (Test-Path $EnvPath)) {
     $missingRequired = @($required.Keys | Where-Object { [string]::IsNullOrEmpty($required[$_]) })
     if ($missingRequired.Count -gt 0) {
         Write-Host ''
-        Write-Host ('  ✗ Required fields missing: ' + ($missingRequired -join ', ')) -ForegroundColor Red
+        Write-Host ('  X Required fields missing: ' + ($missingRequired -join ', ')) -ForegroundColor Red
         Write-Host '    Re-run: scripts/prod.ps1' -ForegroundColor Yellow
         exit 1
     }
@@ -311,7 +311,7 @@ if (-not (Test-Path $EnvPath)) {
         Write-Host '  (Windows has no POSIX mode bits; .env inherits the parent ACL.)' -ForegroundColor DarkGray
         Write-Host ''
     } catch {
-        Write-Host ('  ✗ failed to write ' + (Get-CwdRelative $EnvPath) + ': ' + $_.Exception.Message) -ForegroundColor Red
+        Write-Host ('  X failed to write ' + (Get-CwdRelative $EnvPath) + ': ' + $_.Exception.Message) -ForegroundColor Red
         exit 1
     }
 }
@@ -334,7 +334,7 @@ function Resolve-Npm {
 }
 
 Write-Host ''
-Write-Host '▶ Starting in PROD mode (real Google OAuth from backend/.env, test routes disabled)' -ForegroundColor Cyan
+Write-Host '> Starting in PROD mode (real Google OAuth from backend/.env, test routes disabled)' -ForegroundColor Cyan
 Write-Host ''
 
 # Snapshot parent env, layer backend overlay, restore for frontend.
@@ -385,7 +385,7 @@ try {
 }
 
 Start-Sleep -Seconds 3
-Write-Host '▶ Opening http://localhost:5173 in your default browser...' -ForegroundColor Cyan
+Write-Host '> Opening http://localhost:5173 in your default browser...' -ForegroundColor Cyan
 Start-Process 'http://localhost:5173'
 
 try {
@@ -395,8 +395,8 @@ try {
         $bExit = $BackendProc.HasExited
         $fExit = $FrontendProc.HasExited
         if ($bExit -and $fExit)         { break }
-        if ($bExit -and -not $fExit)    { Write-Host '▶ backend exited; stopping frontend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $FrontendProc.Id 2>$null; break }
-        if ($fExit -and -not $bExit)    { Write-Host '▶ frontend exited; stopping backend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $BackendProc.Id 2>$null; break }
+        if ($bExit -and -not $fExit)    { Write-Host '> backend exited; stopping frontend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $FrontendProc.Id 2>$null; break }
+        if ($fExit -and -not $bExit)    { Write-Host '> frontend exited; stopping backend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $BackendProc.Id 2>$null; break }
         Start-Sleep -Milliseconds 500
     }
     $exitCode = 0

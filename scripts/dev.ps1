@@ -27,7 +27,7 @@ param()
 $ErrorActionPreference = 'Stop'
 
 if ($env:OS -ne 'Windows_NT') {
-    Write-Host '✗ scripts/dev.ps1 is Windows-only. Use scripts/dev.sh on Linux/macOS.' -ForegroundColor Red
+    Write-Host 'X scripts/dev.ps1 is Windows-only. Use scripts/dev.sh on Linux/macOS.' -ForegroundColor Red
     exit 1
 }
 
@@ -44,19 +44,19 @@ foreach ($sub in @('backend','frontend','tests')) {
     }
 }
 if ($missing.Count -gt 0) {
-    Write-Host ('▶ Installing missing dependencies: ' + ($missing -join ', ')) -ForegroundColor Yellow
+    Write-Host ('> Installing missing dependencies: ' + ($missing -join ', ')) -ForegroundColor Yellow
     foreach ($sub in $missing) {
         Push-Location (Join-Path $Root $sub)
         try {
             & npm install --no-audit --no-fund
             if ($LASTEXITCODE -ne 0) {
-                Write-Host ('  ✗ npm install in ' + $sub + ' failed (exit ' + $LASTEXITCODE + ')') -ForegroundColor Red
+                Write-Host ('  X npm install in ' + $sub + ' failed (exit ' + $LASTEXITCODE + ')') -ForegroundColor Red
                 exit $LASTEXITCODE
             }
         } finally { Pop-Location }
     }
     if ($missing -contains 'tests') {
-        Write-Host '▶ Installing Playwright Chromium (browser binary)...' -ForegroundColor Yellow
+        Write-Host '> Installing Playwright Chromium (browser binary)...' -ForegroundColor Yellow
         Push-Location (Join-Path $Root 'tests')
         try {
             & npx --no-install playwright install chromium
@@ -85,23 +85,23 @@ function Resolve-Npm {
 }
 
 Write-Host ''
-Write-Host '┌───────────────────────────────────────────────────────────────┐' -ForegroundColor Cyan
-Write-Host '│  TEST MODE - dummy OAuth, no Google interaction required       │' -ForegroundColor Cyan
-Write-Host '│                                                                 │' -ForegroundColor Cyan
-Write-Host '│  · Auth: backend exposes POST /api/test/login (dev-only).       │' -ForegroundColor Cyan
-Write-Host '│    Any {id,email,name} body mints a valid JWT locally.          │' -ForegroundColor Cyan
-Write-Host '│  · The frontend Sign in with Google button is wired up         │' -ForegroundColor Cyan
-Write-Host '│    identically; only difference vs PROD is whether the         │' -ForegroundColor Cyan
-Write-Host '│    backend hits Google or mocks the reply.                      │' -ForegroundColor Cyan
-Write-Host '│  · Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.ps1.  │' -ForegroundColor Cyan
-Write-Host '│                                                                 │' -ForegroundColor Cyan
-Write-Host '│  Want REAL Google OAuth? Ctrl+C now and run instead:           │' -ForegroundColor Cyan
-Write-Host '│      scripts/prod.sh            (Linux / macOS, Bash 4+)        │' -ForegroundColor Cyan
-Write-Host '│      scripts/prod.ps1           (Windows, PowerShell 5.1+)     │' -ForegroundColor Cyan
-Write-Host '│                                                                 │' -ForegroundColor Cyan
-Write-Host '│  First time with real Google? See documents/google-oauth-setup │' -ForegroundColor Cyan
-Write-Host '│  .md for the step-by-step Cloud Console walkthrough.           │' -ForegroundColor Cyan
-Write-Host '└───────────────────────────────────────────────────────────────┘' -ForegroundColor Cyan
+Write-Host '+---------------------------------------------------------------+' -ForegroundColor Cyan
+Write-Host '|  TEST MODE - dummy OAuth, no Google interaction required       |' -ForegroundColor Cyan
+Write-Host '|                                                                 |' -ForegroundColor Cyan
+Write-Host '|  * Auth: backend exposes POST /api/test/login (dev-only).       |' -ForegroundColor Cyan
+Write-Host '|    Any {id,email,name} body mints a valid JWT locally.          |' -ForegroundColor Cyan
+Write-Host '|  * The frontend Sign in with Google button is wired up         |' -ForegroundColor Cyan
+Write-Host '|    identically; only difference vs PROD is whether the         |' -ForegroundColor Cyan
+Write-Host '|    backend hits Google or mocks the reply.                      |' -ForegroundColor Cyan
+Write-Host '|  * Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.ps1.  |' -ForegroundColor Cyan
+Write-Host '|                                                                 |' -ForegroundColor Cyan
+Write-Host '|  Want REAL Google OAuth? Ctrl+C now and run instead:           |' -ForegroundColor Cyan
+Write-Host '|      scripts/prod.sh            (Linux / macOS, Bash 4+)        |' -ForegroundColor Cyan
+Write-Host '|      scripts/prod.ps1           (Windows, PowerShell 5.1+)     |' -ForegroundColor Cyan
+Write-Host '|                                                                 |' -ForegroundColor Cyan
+Write-Host '|  First time with real Google? See documents/google-oauth-setup |' -ForegroundColor Cyan
+Write-Host '|  .md for the step-by-step Cloud Console walkthrough.           |' -ForegroundColor Cyan
+Write-Host '+---------------------------------------------------------------+' -ForegroundColor Cyan
 Write-Host ''
 
 # ---- Snapshot parent env, layer backend overlay for its spawn only ----
@@ -155,7 +155,7 @@ catch {
 
 # ---- Open the browser once the frontend has had time to bind ---------
 Start-Sleep -Seconds 3
-Write-Host '▶ Opening http://localhost:5173 in your default browser...' -ForegroundColor Cyan
+Write-Host '> Opening http://localhost:5173 in your default browser...' -ForegroundColor Cyan
 Start-Process 'http://localhost:5173'
 
 # ---- Wait loop + cleanup on first child exit ------------------------
@@ -166,8 +166,8 @@ try {
         $bExit = $BackendProc.HasExited
         $fExit = $FrontendProc.HasExited
         if ($bExit -and $fExit)         { break }
-        if ($bExit -and -not $fExit)    { Write-Host '▶ backend exited; stopping frontend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $FrontendProc.Id 2>$null; break }
-        if ($fExit -and -not $bExit)    { Write-Host '▶ frontend exited; stopping backend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $BackendProc.Id 2>$null; break }
+        if ($bExit -and -not $fExit)    { Write-Host '> backend exited; stopping frontend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $FrontendProc.Id 2>$null; break }
+        if ($fExit -and -not $bExit)    { Write-Host '> frontend exited; stopping backend' -ForegroundColor Yellow; & taskkill.exe /F /T /PID $BackendProc.Id 2>$null; break }
         Start-Sleep -Milliseconds 500
     }
     $exitCode = 0
