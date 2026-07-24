@@ -245,7 +245,8 @@ echo "✓ Wrote $line_count lines to backend/.env"
 if [ "$wrote_perms" = "1" ]; then
     echo "  File permissions set to 0600 (owner-only)."
 else
-    echo "  ⚠ Could not set 0600 permissions (likely FAT/SMB share). Skipped."
+    # stderr so a stdout-redirect doesn't silently drop this hint
+    echo "  ⚠ Could not set 0600 permissions (likely FAT/SMB share). Skipped." >&2
 fi
 echo
 echo "  Next:"

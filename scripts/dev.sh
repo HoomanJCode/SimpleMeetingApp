@@ -136,7 +136,7 @@ cleanup() {
     done
     exit "$exit_code"
 }
-trap cleanup INT TERM EXIT
+trap cleanup INT TERM
 
 # ---- header -------------------------------------------------------------
 echo

@@ -155,11 +155,15 @@ if ($Real -and -not $Fe) {
 $BackendProc  = $null
 $FrontendProc = $null
 
-# Ctrl+C handler: 200ms grace lets the native console broadcast settle
-# so SIGINT-handling children can shut down gracefully; then taskkill
-# /F /T guarantees any orphans (npm.cmd shim, tsx watch, vite) are
-# reaped. $eventArgs.Cancel=$true suppresses PowerShell's default
-# behavior of terminating the whole script immediately.
+# Ctrl+C handler: 200ms grace lets the native console broadcast (which
+# -NoNewWindow enables) settle, so SIGINT-handling children can shut
+# down gracefully before we force-kill them. The shorter 200ms (vs
+# scripts/dev.sh's 300ms) reflects: on Windows, -NoNewWindow shares
+# the console so the OS broadcasts Ctrl+C immediately; on Linux the
+# signal has to transit from terminal to npm to node individually, so
+# a bit more time is needed. $eventArgs.Cancel=$true suppresses
+# PowerShell's default behavior of terminating the whole script
+# immediately on Ctrl+C.
 $CancelHandler = [Console]::CancelKeyPress.Add({
     param($sender, $eventArgs)
     $eventArgs.Cancel = $true
@@ -253,7 +257,9 @@ finally {
     # Always remove the cancel handler so the script's process group
     # doesn't keep a handler reference past exit (matters when this
     # script is sourced from a longer-lived parent shell).
-    [Console]::CancelKeyPress.Remove($CancelHandler)
+    if ($null -ne $CancelHandler) {
+        [Console]::CancelKeyPress.Remove($CancelHandler)
+    }
     # Belt + suspenders: if we exited via the wait loop (one child died
     # on its own and we taskkilled the other), confirm no zombies.
     foreach ($proc in @($BackendProc, $FrontendProc)) {

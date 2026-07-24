@@ -16,15 +16,17 @@
 [CmdletBinding()]
 param()
 
-# -ErrorActionPreference SilentlyContinue so Get-NetTCPConnection
-# returning empty doesn't trigger an error when the port is free.
-$ErrorActionPreference = 'SilentlyContinue'
-
+# Don't set $ErrorActionPreference globally - that would silence every
+# error in the script, not just the expected-empty Get-NetTCPConnection
+# result. Scope the silence to the specific cmdlet via -ErrorAction.
 $Ports = @(3001, 5173)
 
 Write-Host '▶ Killing processes on dev ports' -ForegroundColor Cyan
 
 foreach ($port in $Ports) {
+    # -ErrorAction SilentlyContinue keeps the empty-result case quiet
+    # (port was already free, the happy idempotent path) without
+    # masking unrelated errors elsewhere in the script.
     # Force into an array so we can count reliably even when only one
     # connection comes back.
     $conns = @(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
