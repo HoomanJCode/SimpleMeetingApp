@@ -140,7 +140,7 @@ test.describe('Meeting CRUD', () => {
     await expect(page.getByText(/forbidden|not authorized|cannot update|only the host/i)).toBeVisible();
   });
 
-  test('host can delete their own meeting', async ({ page }) => {
+  test('host can cancel their own meeting', async ({ page }) => {
     await loginAs(page, 'alice');
 
     await page.goto(`${FRONTEND_URL}/meetings/new`);
@@ -152,11 +152,36 @@ test.describe('Meeting CRUD', () => {
     await page.getByRole('button', { name: 'Create Meeting' }).click();
     await page.waitForURL(/\/meetings\/[\w-]+/);
 
-    await page.getByRole('button', { name: 'Delete Meeting' }).click();
-    await page.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('button', { name: 'Cancel Meeting' }).click();
 
-    await page.waitForURL(`${FRONTEND_URL}/`);
-    await expect(page.getByRole('heading', { name: validMeeting.title })).not.toBeVisible();
+    // Confirm cancellation in the modal.
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel Meeting' }).click();
+
+    // The meeting remains visible but its status changes to Cancelled.
+    await expect(page.getByText('Cancelled')).toBeVisible();
+    await expect(page.getByRole('heading', { name: validMeeting.title })).toBeVisible();
+  });
+
+  test('host can upload a gallery photo to a meeting', async ({ page }) => {
+    await loginAs(page, 'alice');
+
+    // Create a meeting first.
+    await page.goto(`${FRONTEND_URL}/meetings/new`);
+    await page.getByLabel('Title *').fill(validMeeting.title);
+    await page.getByLabel('Description *').fill(validMeeting.description);
+    await page.getByLabel('Location *').fill(validMeeting.location);
+    await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
+    await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
+    await page.getByRole('button', { name: 'Create Meeting' }).click();
+    await page.waitForURL(/\/meetings\/[\w-]+/);
+
+    // Upload a gallery photo through the hidden file input.
+    const fileInput = page.getByLabel('Add photo', { exact: true });
+    await fileInput.setInputFiles('tests/fixtures/test-image.png');
+
+    // Wait for the image to render in the Photos section.
+    await expect(page.locator('img[alt=""]').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('No photos yet.')).not.toBeVisible();
   });
 
   test('search filters the meeting list', async ({ page }) => {
