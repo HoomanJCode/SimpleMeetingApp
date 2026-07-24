@@ -26,3 +26,33 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
+## 2. Add Cover Photo and Photo Gallery to Meetings
+
+**Request:** Meetings should support a cover photo (single image) and a photo gallery (multiple images) to make events more visually engaging.
+
+**Scope:**
+- **Database:** Add migration for `cover_photo_url` (TEXT, nullable) on meetings table and a new `meeting_photos` table (id, meeting_id FK, url TEXT, created_at).
+- **Backend types:** Extend `Meeting` model with `coverPhotoUrl?: string` and `photos?: MeetingPhoto[]`.
+- **Backend service:** Extend `createMeeting` and `updateMeeting` to accept coverPhotoUrl and photos. Add endpoints: `POST /:id/photos` (upload), `DELETE /:id/photos/:photoId` (remove).
+- **Backend middleware/routes:** Image upload handling (multer or similar), file storage (local disk or cloud like S3/Cloudinary).
+- **Frontend MeetingForm:** Add cover photo upload field (drag-and-drop or file picker with preview) and photo gallery multi-upload.
+- **Frontend MeetingCard:** Show cover photo thumbnail on meeting cards in the list.
+- **Frontend MeetingDetail:** Show full cover photo and photo gallery grid with lightbox.
+- **Frontend types:** Extend `Meeting` type with `coverPhotoUrl` and `photos[]`.
+
+**Files:**
+- `backend/src/db/migrations/` — new migration for cover_photo and meeting_photos table
+- `backend/src/types/models.ts` — MeetingPhoto interface, extend Meeting
+- `backend/src/services/meetingService.ts` — accept/return photo fields
+- `backend/src/services/meetingSchemas.ts` — validation for photo uploads
+- `backend/src/routes/meeting.routes.ts` — new upload/delete photo endpoints
+- `frontend/src/types/index.ts` — extend Meeting type
+- `frontend/src/api/meetings.ts` — upload/delete photo API calls
+- `frontend/src/components/meeting/MeetingForm.tsx` — photo upload UI
+- `frontend/src/components/meeting/MeetingCard.tsx` — cover photo thumbnail
+- `frontend/src/components/meeting/MeetingDetail.tsx` — photo gallery display
+
+**Open questions:**
+- File storage: local disk (simpler, needs .gitignore for uploads/) vs cloud (S3, Cloudinary)?
+- Max file size / allowed formats?
+- Max number of photos per meeting?
