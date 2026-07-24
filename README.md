@@ -62,13 +62,25 @@ IrMeetingApp/
 
 ### One-command setup + run
 
-From the project root, in **two** steps:
+From the project root, run the **setup script once** to install all npm
+dependencies + Playwright Chromium:
 
-```bash
-npm run setup     # installs all deps (root + backend + frontend + tests) + Playwright
+**Windows (PowerShell 5.1+ or PowerShell 7+):**
+```powershell
+pwsh -NoProfile -File scripts/setup.ps1
 ```
 
-Then start backend + frontend in **TEST mode** with the **platform-native script** for your shell:
+**Linux / macOS (bash):**
+```bash
+bash scripts/setup.sh
+```
+
+> Tip: `package.json` exposes convenience npm aliases `npm run setup:ps`
+> and `npm run setup:sh` that wrap the same PowerShell / Bash commands.
+> Setup is idempotent (`npm install` is a no-op when packages are
+> up-to-date) so re-running after the initial install is harmless.
+
+Then, **every time you want to develop**, run the dev script:
 
 **Windows (PowerShell 5.1+ or PowerShell 7+):**
 ```powershell
@@ -80,10 +92,14 @@ pwsh -NoProfile -File scripts/dev.ps1
 bash scripts/dev.sh
 ```
 
-> Tip: `package.json` exposes convenience npm aliases `npm run dev:ps` and
-> `npm run dev:sh` that wrap the same PowerShell / Bash commands, so you can
-> stay in the `npm run X` vocabulary if you prefer. The platform-specific
-> aliases (`npm run dev:be`, `npm run dev:real`, etc.) follow the same pattern.
+> The dev script does a pre-flight check that `node_modules` is installed
+> in each subproject (`backend`, `frontend`, `tests`) and exits with a
+> clear hint to re-run setup if any are missing.
+> 
+> Tip: `package.json` also exposes convenience npm aliases `npm run dev:ps`
+> and `npm run dev:sh` (and `npm run dev:be`, `npm run dev:real`, etc.)
+> that wrap the same PowerShell / Bash commands, so you can stay in the
+> `npm run X` vocabulary if you prefer.
 
 Open [http://localhost:5173](http://localhost:5173). In test mode, log in by visiting any URL like
 `http://localhost:5173/auth/callback?token=…` — see `tests/helpers/auth.ts` for how the test helpers
