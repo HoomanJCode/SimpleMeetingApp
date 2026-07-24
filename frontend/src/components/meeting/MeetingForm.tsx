@@ -35,6 +35,8 @@ export function MeetingForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Step 1: Create (and revoke) a temporary object URL for the selected cover file.
+  // This keeps memory clean when the file changes or the component unmounts.
   useEffect(() => {
     if (!coverFile) {
       setPreviewUrl(null);
@@ -45,8 +47,14 @@ export function MeetingForm({
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
 
+  // Step 2: Decide which image to show:
+  // - If the user removed the cover, show nothing.
+  // - If a new file was selected, show its local preview.
+  // - Otherwise show the existing cover URL (if any).
   const coverPreview = coverRemoved ? null : (previewUrl ?? coverPhotoUrl ?? null);
 
+  // Step 3: Mark the form as dirty if any core field changed, a new cover file was chosen,
+  // or an existing cover was removed. This drives the NavigationBlocker.
   const isDirty =
     title !== (initialData?.title || '') ||
     description !== (initialData?.description || '') ||
@@ -61,12 +69,14 @@ export function MeetingForm({
   }, [isDirty, onDirtyChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // When a file is selected, store it and clear any previous removal flag.
     const file = e.target.files?.[0] ?? null;
     setCoverFile(file);
     setCoverRemoved(false);
   };
 
   const handleClear = () => {
+    // When the user clicks "remove", drop the pending file and mark removal.
     setCoverFile(null);
     setCoverRemoved(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -74,6 +84,7 @@ export function MeetingForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Step 5: Send both the meeting fields and the cover photo state to the parent.
     await onSubmit({
       title,
       description,

@@ -37,11 +37,15 @@ export default function EditMeetingPage() {
 
   const handleSubmit = async (data: CreateMeetingInput & { coverPhotoFile?: File | null; coverPhotoRemoved?: boolean }) => {
     setError(null);
+    // Step 1: Separate the cover photo state from the core meeting fields.
     const { coverPhotoFile, coverPhotoRemoved, ...meetingData } = data;
 
     try {
+      // Step 2: Update the meeting's text/number fields first.
       await update(id!, meetingData);
 
+      // Step 3: Handle cover photo changes separately.
+      // If a new file was selected, upload it and update the cover URL.
       if (coverPhotoFile) {
         try {
           const photo = await upload(id!, coverPhotoFile);
@@ -49,7 +53,9 @@ export default function EditMeetingPage() {
         } catch (uploadErr: any) {
           toast(uploadErr.message || 'Cover photo upload failed', 'error');
         }
-      } else if (coverPhotoRemoved) {
+      }
+      // Step 4: Otherwise, if the user cleared the existing cover, set it to null.
+      else if (coverPhotoRemoved) {
         try {
           await update(id!, { coverPhotoUrl: null });
         } catch (removeErr: any) {
@@ -57,6 +63,7 @@ export default function EditMeetingPage() {
         }
       }
 
+      // Step 5: Mark the form as clean and navigate back to the detail view.
       toast('Meeting updated successfully!', 'success');
       submittedRef.current = true;
       setIsDirty(false);

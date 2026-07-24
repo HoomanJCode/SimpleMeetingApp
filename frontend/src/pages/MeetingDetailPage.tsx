@@ -77,7 +77,9 @@ export default function MeetingDetailPage() {
 
   const handleUploadPhoto = async (file: File) => {
     try {
+      // Step 1: Upload the gallery photo to the backend.
       await uploadPhoto(id!, file);
+      // Step 2: Refetch the full meeting to get the updated photo list.
       const updated = await getMeeting(id!);
       setMeeting(updated);
       toast('Photo uploaded.', 'success');
@@ -88,7 +90,9 @@ export default function MeetingDetailPage() {
 
   const handleDeletePhoto = async (photoId: string) => {
     try {
+      // Step 1: Delete the gallery photo from the backend.
       await deletePhoto(id!, photoId);
+      // Step 2: Refetch the full meeting to reflect the removed photo.
       const updated = await getMeeting(id!);
       setMeeting(updated);
       toast('Photo deleted.', 'info');

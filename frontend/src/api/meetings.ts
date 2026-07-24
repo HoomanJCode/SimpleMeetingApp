@@ -70,19 +70,23 @@ export function getMyMeetings(): Promise<{ hosting: Meeting[]; attending: Meetin
 }
 
 export async function uploadMeetingPhoto(meetingId: string, file: File): Promise<MeetingPhoto> {
+  // Step 1: Build a multipart/form-data body so the backend can receive the file.
   const formData = new FormData();
   formData.append('photo', file);
 
+  // Step 2: Attach the auth token manually because fetch() does not go through api.request().
   const headers: Record<string, string> = {};
   const token = getAccessToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  // Step 3: Send the upload request to the meeting-specific photo endpoint.
   const res = await fetch(`/api/meetings/${meetingId}/photos`, {
     method: 'POST',
     headers,
     body: formData,
   });
 
+  // Step 4: Throw a readable error if the server rejects the upload.
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error?.message || 'Failed to upload photo');

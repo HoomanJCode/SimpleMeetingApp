@@ -172,6 +172,7 @@ export function useLeaveMeeting() {
 export function useUploadMeetingPhoto() {
   const [isLoading, setIsLoading] = useState(false);
 
+  // Wrap the raw upload API in a hook that exposes an `isLoading` flag.
   const upload = useCallback(async (meetingId: string, file: File) => {
     setIsLoading(true);
     try {
@@ -187,6 +188,7 @@ export function useUploadMeetingPhoto() {
 export function useDeleteMeetingPhoto() {
   const [isLoading, setIsLoading] = useState(false);
 
+  // Wrap the raw delete API in a hook that exposes an `isLoading` flag.
   const remove = useCallback(async (meetingId: string, photoId: string) => {
     setIsLoading(true);
     try {

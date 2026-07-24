@@ -51,14 +51,16 @@ export function MeetingDetail({
   const photos = meeting.photos ?? [];
 
   const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Step 1: Grab the selected gallery photo and hand it off to the parent handler.
     const file = e.target.files?.[0];
     if (file && onUploadPhoto) onUploadPhoto(file);
+    // Step 2: Reset the input so the same file can be selected again if needed.
     if (e.target) e.target.value = '';
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Cover photo */}
+      {/* Step 1: Cover photo hero — show the stored cover or a placeholder. */}
       {meeting.coverPhotoUrl ? (
         <div className="w-full h-56 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
           <img
@@ -146,7 +148,7 @@ export function MeetingDetail({
         <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{meeting.description}</p>
       </div>
 
-      {/* Photo gallery */}
+      {/* Step 2: Photo gallery — grid of uploaded meeting photos with host controls. */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Photos</h3>
