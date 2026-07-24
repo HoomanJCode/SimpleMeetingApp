@@ -190,8 +190,7 @@ catch {
     # block in this script will tree-kill orphaned children on normal
     # exit. Only Ctrl+C mid-run is degraded; warn loudly so users
     # notice.
-    Write-Warning ('Could not register Ctrl+C handler; Ctrl+C may not cleanly kill child processes. ' +
-        'Underlying error: ' + $_.Exception.Message)
+    Write-Warning ("Could not register Ctrl+C handler; Ctrl+C may not cleanly kill child processes. Re-run from an interactive PowerShell session. Underlying error: $($_.Exception.Message)")
 }
 
 try {
