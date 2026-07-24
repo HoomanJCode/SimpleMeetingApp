@@ -4,26 +4,10 @@
   "version": "1.0.0",
   "description": "IrMeetingApp - tech meetup discovery platform (root orchestrator scripts)",
   "scripts": {
-    "setup:ps": "pwsh -NoProfile -File scripts/setup.ps1",
-    "setup:sh": "bash scripts/setup.sh",
     "dev:ps": "pwsh -NoProfile -File scripts/dev.ps1",
     "dev:sh": "bash scripts/dev.sh",
-    "dev:real:ps": "pwsh -NoProfile -File scripts/dev.ps1 --real",
-    "dev:real:sh": "bash scripts/dev.sh --real",
-    "dev:be:ps": "pwsh -NoProfile -File scripts/dev.ps1 --be",
-    "dev:be:sh": "bash scripts/dev.sh --be",
-    "dev:fe:ps": "pwsh -NoProfile -File scripts/dev.ps1 --fe",
-    "dev:fe:sh": "bash scripts/dev.sh --fe",
-    "kill:ps": "pwsh -NoProfile -File scripts/kill-servers.ps1",
-    "kill:sh": "bash scripts/kill-servers.sh",
-    "db:reset:ps": "pwsh -NoProfile -File scripts/db.ps1 reset",
-    "db:reset:sh": "bash scripts/db.sh reset",
-    "db:seed:ps": "pwsh -NoProfile -File scripts/db.ps1 seed",
-    "db:seed:sh": "bash scripts/db.sh seed",
-    "db:path:ps": "pwsh -NoProfile -File scripts/db.ps1 path",
-    "db:path:sh": "bash scripts/db.sh path",
-    "env:wizard:ps": "pwsh -NoProfile -File scripts/env-wizard.ps1",
-    "env:wizard:sh": "bash scripts/env-wizard.sh",
+    "prod:ps": "pwsh -NoProfile -File scripts/prod.ps1",
+    "prod:sh": "bash scripts/prod.sh",
     "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
     "start": "npm run start --prefix backend",
@@ -35,12 +19,6 @@
     "test:e2e": "npm run test --prefix tests",
     "test:e2e:headed": "npm run test:headed --prefix tests",
     "test:e2e:ui": "npm run test:ui --prefix tests",
-    "test:e2e:report": "npm run report --prefix tests",
-    "clean:ps": "pwsh -NoProfile -File scripts/clean.ps1",
-    "clean:sh": "bash scripts/clean.sh"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.0",
-    "kill-port": "^2.0.1"
+    "test:e2e:report": "npm run report --prefix tests"
   }
 }
