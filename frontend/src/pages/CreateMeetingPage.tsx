@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MeetingForm } from '../components/meeting/MeetingForm';
-import { useCreateMeeting } from '../hooks/useMeetings';
+import { useCreateMeeting, useUpdateMeeting, useUploadMeetingPhoto } from '../hooks/useMeetings';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBeforeUnload } from '../hooks/useBeforeUnload';
 import { useToast } from '../components/ui/Toast';
@@ -12,15 +12,28 @@ export function CreateMeetingPage() {
   useDocumentTitle('Create a New Meeting');
   const navigate = useNavigate();
   const { create, isLoading, error } = useCreateMeeting();
+  const { update } = useUpdateMeeting();
+  const { upload } = useUploadMeetingPhoto();
   const { toast } = useToast();
   const [isDirty, setIsDirty] = useState(false);
   const submittedRef = useRef(false); // set to true after successful create; blocks NavigationBlocker
 
   useBeforeUnload(isDirty);
 
-  const handleSubmit = async (data: CreateMeetingInput) => {
+  const handleSubmit = async (data: CreateMeetingInput & { coverPhotoFile?: File | null; coverPhotoRemoved?: boolean }) => {
     try {
-      const meeting = await create(data);
+      const { coverPhotoFile, coverPhotoRemoved, ...meetingData } = data;
+      const meeting = await create(meetingData);
+
+      if (coverPhotoFile) {
+        try {
+          const photo = await upload(meeting.id, coverPhotoFile);
+          await update(meeting.id, { coverPhotoUrl: photo.url });
+        } catch (uploadErr: any) {
+          toast(uploadErr.message || 'Cover photo upload failed', 'error');
+        }
+      }
+
       toast('Meeting created successfully!', 'success');
       submittedRef.current = true;
       setIsDirty(false);

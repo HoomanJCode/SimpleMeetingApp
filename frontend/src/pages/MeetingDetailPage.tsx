@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { MeetingDetail } from '../components/meeting/MeetingDetail';
-import { useMeeting, useJoinMeeting, useLeaveMeeting, useCancelMeeting } from '../hooks/useMeetings';
+import { useMeeting, useJoinMeeting, useLeaveMeeting, useCancelMeeting, useUploadMeetingPhoto, useDeleteMeetingPhoto } from '../hooks/useMeetings';
 import { useRealtime } from '../hooks/useRealtime';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/ui/Toast';
@@ -18,6 +18,8 @@ export default function MeetingDetailPage() {
   const { join, isLoading: isJoining } = useJoinMeeting();
   const { leave, isLoading: isLeaving } = useLeaveMeeting();
   const { cancel, isLoading: isCancelling } = useCancelMeeting();
+  const { upload: uploadPhoto, isLoading: isUploadingPhoto } = useUploadMeetingPhoto();
+  const { remove: deletePhoto, isLoading: isDeletingPhoto } = useDeleteMeetingPhoto();
 
   useDocumentTitle(meeting?.title || 'Meeting Details');
 
@@ -73,6 +75,28 @@ export default function MeetingDetailPage() {
     }
   };
 
+  const handleUploadPhoto = async (file: File) => {
+    try {
+      await uploadPhoto(id!, file);
+      const updated = await getMeeting(id!);
+      setMeeting(updated);
+      toast('Photo uploaded.', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to upload photo', 'error');
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    try {
+      await deletePhoto(id!, photoId);
+      const updated = await getMeeting(id!);
+      setMeeting(updated);
+      toast('Photo deleted.', 'info');
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete photo', 'error');
+    }
+  };
+
   return (
     <MeetingDetail
       meeting={meeting}
@@ -83,6 +107,9 @@ export default function MeetingDetailPage() {
       isJoining={isJoining}
       isLeaving={isLeaving}
       isCancelling={isCancelling}
+      isUploading={isUploadingPhoto || isDeletingPhoto}
+      onUploadPhoto={handleUploadPhoto}
+      onDeletePhoto={handleDeletePhoto}
     />
   );
 }

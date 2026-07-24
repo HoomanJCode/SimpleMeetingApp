@@ -1,5 +1,5 @@
-import { api } from './client';
-import type { Meeting, MeetingResponse } from '../types';
+import { api, getAccessToken } from './client';
+import type { Meeting, MeetingResponse, MeetingPhoto } from '../types';
 
 export interface CreateMeetingInput {
   title: string;
@@ -7,6 +7,7 @@ export interface CreateMeetingInput {
   dateTime: string;
   location: string;
   capacity: number;
+  coverPhotoUrl?: string | null;
 }
 
 export interface UpdateMeetingInput {
@@ -16,6 +17,7 @@ export interface UpdateMeetingInput {
   location?: string;
   capacity?: number;
   status?: string;
+  coverPhotoUrl?: string | null;
 }
 
 export interface MeetingListResponse {
@@ -65,4 +67,30 @@ export function leaveMeeting(id: string): Promise<{ message: string; participant
 
 export function getMyMeetings(): Promise<{ hosting: Meeting[]; attending: Meeting[] }> {
   return api.get('/meetings/my');
+}
+
+export async function uploadMeetingPhoto(meetingId: string, file: File): Promise<MeetingPhoto> {
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`/api/meetings/${meetingId}/photos`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || 'Failed to upload photo');
+  }
+
+  return res.json();
+}
+
+export function deleteMeetingPhoto(meetingId: string, photoId: string): Promise<void> {
+  return api.delete(`/meetings/${meetingId}/photos/${photoId}`);
 }

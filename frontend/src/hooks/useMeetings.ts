@@ -8,6 +8,8 @@ import {
   joinMeeting as apiJoinMeeting,
   leaveMeeting as apiLeaveMeeting,
   getMyMeetings,
+  uploadMeetingPhoto as apiUploadMeetingPhoto,
+  deleteMeetingPhoto as apiDeleteMeetingPhoto,
   type CreateMeetingInput,
   type UpdateMeetingInput,
   type MeetingListResponse,
@@ -165,4 +167,34 @@ export function useLeaveMeeting() {
   }, []);
 
   return { leave, isLoading };
+}
+
+export function useUploadMeetingPhoto() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const upload = useCallback(async (meetingId: string, file: File) => {
+    setIsLoading(true);
+    try {
+      return await apiUploadMeetingPhoto(meetingId, file);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { upload, isLoading };
+}
+
+export function useDeleteMeetingPhoto() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const remove = useCallback(async (meetingId: string, photoId: string) => {
+    setIsLoading(true);
+    try {
+      await apiDeleteMeetingPhoto(meetingId, photoId);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { remove, isLoading };
 }
