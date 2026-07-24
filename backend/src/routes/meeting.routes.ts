@@ -170,7 +170,10 @@ meetingRouter.post('/:id/photos', authenticate, upload.single('photo'), (req: Re
       res.status(400).json({ error: { code: 'NO_FILE', message: 'No image file provided' } });
       return;
     }
-    const url = `/uploads/meetings/${req.file.filename}`;
+    // Build an absolute URL so consumers (and validation) can treat it as a valid URL.
+    const relativeUrl = `/uploads/meetings/${req.file.filename}`;
+    const host = req.get('host') || 'localhost';
+    const url = `${req.protocol}://${host}${relativeUrl}`;
     const photo = addMeetingPhoto(id, req.user!.id, url);
     res.status(201).json(photo);
   } catch (err) {
@@ -191,8 +194,10 @@ meetingRouter.delete('/:id/photos/:photoId', authenticate, (req: Request, res: R
     const id = req.params.id as string;
     const photoId = req.params.photoId as string;
     const photo = deleteMeetingPhoto(id, photoId, req.user!.id);
-    // Delete the actual file from disk
-    const filePath = path.resolve(process.cwd(), photo.url.replace(/^\//, ''));
+    // Delete the actual file from disk. The stored URL may be absolute (new) or relative (legacy).
+    const rawUrl = photo.url;
+    const pathname = rawUrl.startsWith('http') ? new URL(rawUrl).pathname : rawUrl.replace(/^\//, '');
+    const filePath = path.resolve(process.cwd(), pathname);
     fs.unlink(filePath, () => {});
     res.status(204).send();
   } catch (err) {
