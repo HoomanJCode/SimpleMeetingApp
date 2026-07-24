@@ -178,7 +178,7 @@ to debug a single piece in isolation.
 |----------------------------|------------------------------------------------------------------------------------------------------|
 | `npm run setup`            | Install deps for root + backend + frontend + tests; install Playwright Chromium                       |
 | `npm run dev`              | Start backend + frontend concurrently in TEST mode (dummy OAuth, `/api/test/*` enabled)              |
-| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes). If `.env` is missing AND stdin is a TTY, auto-launches `env:wizard` first. Pass `--no-wizard` (passed through `scripts/dev.js`) to skip that check in CI / Docker. |
+| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes). If `.env` is missing AND stdin is a TTY, auto-launches `env:wizard` first. To skip the check in CI / Docker: <br>`npm run dev:real -- --no-wizard` |
 | `npm run dev:be`           | Start only the backend (test mode)                                                                   |
 | `npm run dev:fe`           | Start only the frontend                                                                              |
 | `npm run kill`             | Free ports 3001 + 5173 (kills zombie node.exe after interrupted runs)                                |
