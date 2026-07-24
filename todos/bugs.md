@@ -24,3 +24,18 @@ Reported bugs to fix. Keep adding as you find them.
 
 ---
 
+## 3. LoginModal input fields lose focus after every keystroke
+
+**Where:** Sign In modal (LoginModal) — after signing out and trying to sign in again  
+**What:** Typing in the email/password fields only allows one character, then focus is lost. Text also appears to go white/invisible.  
+**Root cause:** The `Modal` component's `useEffect` depends on `handleKeyDown`, which depends on `onClose`. LoginModal's parent (Header) passes `onClose={() => setLoginModalOpen(false)}` — a new inline arrow function on every render. This causes `handleKeyDown` to be recreated, which triggers the Modal's effect cleanup (`previousFocusRef.current.focus()` — steals focus back to the trigger button). The Input and Modal also lack dark-mode CSS classes (`dark:bg-*`, `dark:text-*`), causing white-on-white text when the global theme is dark.  
+**Files:**
+- `frontend/src/components/ui/Modal.tsx` — unstable `handleKeyDown` callback, no dark mode classes  
+- `frontend/src/components/ui/Input.tsx` — no `dark:` variants on base styles  
+- `frontend/src/components/auth/LoginModal.tsx` — passes inline `onClose` arrow  
+**Fix:**  
+1. In `Modal.tsx`: store `onClose` in a ref and use it in `handleKeyDown` via the ref (removes `onClose` from the dependency array, making `handleKeyDown` stable).  
+2. In `Modal.tsx` / `Input.tsx`: add `dark:` Tailwind variants (bg, text, border colors).
+
+---
+
