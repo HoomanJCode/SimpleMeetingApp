@@ -1,0 +1,34 @@
+{
+  "name": "irmeeting-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "IrMeetingApp - tech meetup discovery platform (root orchestrator scripts)",
+  "scripts": {
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend && npm install --prefix tests && npx --prefix tests playwright install chromium",
+    "dev": "node scripts/dev.js",
+    "dev:real": "node scripts/dev.js --real",
+    "dev:be": "node scripts/dev.js --be",
+    "dev:fe": "node scripts/dev.js --fe",
+    "kill": "node scripts/kill-servers.js",
+    "db:reset": "node scripts/db.js reset",
+    "db:seed": "node scripts/db.js seed",
+    "db:path": "node scripts/db.js path",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "preview": "npm run preview --prefix frontend",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "npm run test --prefix backend && npm run test --prefix frontend",
+    "test:be": "npm run test --prefix backend",
+    "test:fe": "npm run test --prefix frontend",
+    "test:e2e": "npm run test --prefix tests",
+    "test:e2e:headed": "npm run test:headed --prefix tests",
+    "test:e2e:ui": "npm run test:ui --prefix tests",
+    "test:e2e:report": "npm run report --prefix tests",
+    "clean": "node scripts/clean.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "kill-port": "^2.0.1"
+  }
+}

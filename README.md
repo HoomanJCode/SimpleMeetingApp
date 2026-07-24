@@ -50,34 +50,41 @@ IrMeetingApp/
 ### Prerequisites
 
 - Node.js 20+
-- A Google Cloud Console project with OAuth 2.0 credentials
+- (Production only) A Google Cloud Console project with OAuth 2.0 credentials
   - Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
 
-### 1. Backend
+### One-command setup + run
+
+From the project root:
 
 ```bash
-cd backend
-cp .env.example .env
-# Edit .env — fill in GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET, FRONTEND_URL
-npm install
-npm run dev
+npm run setup    # installs all deps (backend, frontend, tests, root orchestrator)
+npm run dev      # starts backend + frontend in TEST mode (dummy OAuth, /api/test/* routes live)
 ```
 
-The backend starts on `http://localhost:3001`.
+Open [http://localhost:5173](http://localhost:5173). In test mode, log in by visiting any URL like
+`http://localhost:5173/auth/callback?token=…` — see `tests/helpers/auth.ts` for how the test helpers
+mint tokens, or call `POST /api/test/login` manually (body: `{id, email, name}`).
 
-### 2. Frontend
+To stop both servers cleanly: `Ctrl+C` in the terminal that ran `npm run dev`. If a hard kill left
+ports 3001/5173 held by zombie processes, run `npm run kill`.
+
+### Production-like mode (real Google OAuth)
+
+If you have real `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` + a `JWT_SECRET` in `backend/.env`:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+npm run dev:real   # backend reads .env, test routes are disabled
 ```
 
-The frontend starts on `http://localhost:5173`.
+### Manual per-subproject setup (legacy)
 
-### 3. Open the App
+If you don't want to use the root scripts, the old per-folder flow still works:
 
-Navigate to [http://localhost:5173](http://localhost:5173) and sign in with Google.
+```bash
+cd backend    && cp .env.example .env && npm install && npm run dev   # http://localhost:3001
+cd frontend   && npm install && npm run dev                            # http://localhost:5173
+```
 
 ## Environment Variables
 
@@ -99,36 +106,25 @@ Navigate to [http://localhost:5173](http://localhost:5173) and sign in with Goog
 
 ## Testing
 
-### Backend Unit + Integration Tests
-
 ```bash
-cd backend
-npm test                # 84+ tests (auth, meetings, validation, rate limiting, WebSocket)
-npm run test:watch      # Watch mode
+npm test               # all tests: backend + frontend unit + Playwright E2E
+npm run test:unit      # backend + frontend unit tests only (no browser)
+npm run test:e2e       # Playwright E2E only (auto-starts servers via webServer)
+npm run test:e2e:ui    # Playwright with the UI runner (interactive)
 ```
 
-### Frontend Unit Tests
+The E2E suite auto-starts both servers via the `webServer` config in
+`tests/playwright.config.ts`, using the same test env (`scripts/test-env.cjs`) as
+`npm run dev`. No real Google OAuth credentials are needed — tests pump tokens
+through the dev-only `/api/test/login` endpoint.
 
-```bash
-cd frontend
-npm test                # 52+ tests (components, hooks, auth context)
-npm run test:watch      # Watch mode
-```
+### What gets tested where
 
-### E2E Tests (Playwright)
-
-The E2E tests require both backend and frontend running. Playwright handles this automatically via the `webServer` config.
-
-```bash
-cd tests
-npm install
-npx playwright install chromium
-npx playwright test     # Headless (CI)
-npx playwright test --headed  # Visible browser
-npx playwright test --ui      # UI mode
-```
-
-> **Note:** The webServer in `tests/playwright.config.ts` provides dummy Google OAuth env vars. E2E tests bypass the real Google flow via a dev-only `/api/test/login` endpoint. To run E2E tests, no real OAuth credentials are needed.
+| Layer        | Runner   | Count | What it covers                                              |
+|--------------|----------|-------|-------------------------------------------------------------|
+| Backend      | Vitest   | 84+   | auth, meetings, validation, rate limiting, WebSocket          |
+| Frontend     | Vitest   | 52+   | UI components, hooks, AuthContext                            |
+| E2E (Playwright) | Chromium | —  | full flows: auth, meeting CRUD, participants, realtime       |
 
 ### E2E Test Fixtures
 
@@ -149,7 +145,51 @@ npx playwright test --ui      # UI mode
 
 ## Scripts Reference
 
-### Backend
+### Root orchestrator (run from project root)
+
+These scripts coordinate the three subprojects. They are the recommended way to work
+with the codebase day-to-day — use the manual per-folder scripts below only when you need
+to debug a single piece in isolation.
+
+| Script                     | Description                                                                                          |
+|----------------------------|------------------------------------------------------------------------------------------------------|
+| `npm run setup`            | Install deps for root + backend + frontend + tests; install Playwright Chromium                       |
+| `npm run dev`              | Start backend + frontend concurrently in TEST mode (dummy OAuth, `/api/test/*` enabled)              |
+| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes)                   |
+| `npm run dev:be`           | Start only the backend (test mode)                                                                   |
+| `npm run dev:fe`           | Start only the frontend                                                                              |
+| `npm run kill`             | Free ports 3001 + 5173 (kills zombie node.exe after interrupted runs)                                |
+| `npm run db:reset`         | Delete the SQLite DB file; next backend start recreates + migrates + seeds                           |
+| `npm run db:seed`          | Print info about when seed runs (seed is automatic on first boot of a fresh DB)                      |
+| `npm run db:path`          | Print absolute path of the SQLite file                                                               |
+| `npm run lint`             | Type-check both backend + frontend                                                                   |
+| `npm run build`            | Build backend (`tsc`) + frontend (`tsc -b && vite build`)                                            |
+| `npm run start`            | Run the production backend (assumes you've already built; serves frontend `dist/`)                   |
+| `npm run preview`          | Preview the production frontend build                                                                |
+| `npm test`                 | Run ALL tests (backend unit + frontend unit + E2E)                                                   |
+| `npm run test:unit`        | Run backend + frontend unit tests (Vitest) only                                                      |
+| `npm run test:be`          | Backend unit tests only                                                                              |
+| `npm run test:fe`          | Frontend unit tests only                                                                             |
+| `npm run test:e2e`         | Playwright E2E (headless)                                                                            |
+| `npm run test:e2e:headed`  | Playwright with visible browser                                                                      |
+| `npm run test:e2e:ui`      | Playwright UI mode                                                                                   |
+| `npm run test:e2e:report`  | Open the last HTML report (`playwright show-report`)                                                 |
+| `npm run clean`            | Remove `dist/`, `test-results/`, `playwright-report/` (preserves DB and node_modules)                |
+
+#### How `dev`/`dev:real` differ
+
+| Aspect              | `npm run dev`                          | `npm run dev:real`                       |
+|---------------------|----------------------------------------|------------------------------------------|
+| Auth source         | Dummy OAuth via `/api/test/login`      | Real Google OAuth (`backend/.env`)       |
+| `ENABLE_TEST_ROUTES`| `1`                                    | unset (routes 404)                       |
+| `JWT_SECRET`        | Hardcoded dev value                     | Whatever is in `backend/.env`           |
+| When to use         | Day-to-day dev, E2E tests              | Production-like smoke testing            |
+
+The shared values (HOST=127.0.0.1, FRONTEND_URL=http://127.0.0.1:5173) come from
+`scripts/test-env.cjs`, which is also imported by `tests/playwright.config.ts` — so
+running E2E tests and the dev server never drift out of sync.
+
+### Backend (`cd backend`)
 
 | Script                | Description                              |
 |-----------------------|------------------------------------------|
@@ -159,7 +199,7 @@ npx playwright test --ui      # UI mode
 | `npm test`            | Run tests (Vitest)                       |
 | `npm run lint`        | Type-check (`tsc --noEmit`)              |
 
-### Frontend
+### Frontend (`cd frontend`)
 
 | Script                | Description                              |
 |-----------------------|------------------------------------------|
@@ -169,7 +209,7 @@ npx playwright test --ui      # UI mode
 | `npm test`            | Run tests (Vitest)                       |
 | `npm run lint`        | Type-check (`tsc --noEmit`)              |
 
-### Tests
+### Tests (`cd tests`)
 
 | Script                | Description                              |
 |-----------------------|------------------------------------------|
