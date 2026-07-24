@@ -86,14 +86,12 @@ function Resolve-Npm {
 
 Write-Host ''
 Write-Host '+---------------------------------------------------------------+' -ForegroundColor Cyan
-Write-Host '|  TEST MODE - dummy OAuth, no Google interaction required       |' -ForegroundColor Cyan
+Write-Host '|  TEST MODE - email/password auth, no Google OAuth required       |' -ForegroundColor Cyan
 Write-Host '|                                                                 |' -ForegroundColor Cyan
-Write-Host '|  * Auth: backend exposes POST /api/test/login (dev-only).       |' -ForegroundColor Cyan
-Write-Host '|    Any {id,email,name} body mints a valid JWT locally.          |' -ForegroundColor Cyan
-Write-Host '|  * The frontend Sign in with Google button is wired up         |' -ForegroundColor Cyan
-Write-Host '|    identically; only difference vs PROD is whether the         |' -ForegroundColor Cyan
-Write-Host '|    backend hits Google or mocks the reply.                      |' -ForegroundColor Cyan
-Write-Host '|  * Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.ps1.  |' -ForegroundColor Cyan
+Write-Host '|  * Auth: Sign In with email + password. Backend auto-registers    |' -ForegroundColor Cyan
+Write-Host '|    new users on first login. No Google account needed.            |' -ForegroundColor Cyan
+Write-Host '|  * Test routes (/api/test/*) enabled for E2E tests.               |' -ForegroundColor Cyan
+Write-Host '|  * Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.ps1.   |' -ForegroundColor Cyan
 Write-Host '|                                                                 |' -ForegroundColor Cyan
 Write-Host '|  Want REAL Google OAuth? Ctrl+C now and run instead:           |' -ForegroundColor Cyan
 Write-Host '|      scripts/prod.sh            (Linux / macOS, Bash 4+)        |' -ForegroundColor Cyan
@@ -129,11 +127,15 @@ try {
 }
 
 # ---- Spawn frontend (inherits clean parent env — no backend secrets) --
+# VITE_AUTH_METHOD tells the frontend which auth mode to use without
+# needing a backend API call (which would fail on cold start).
+$env:VITE_AUTH_METHOD = 'userpass'
 $FrontendProc = Start-Process -FilePath (Resolve-Npm) `
     -ArgumentList @('run','dev','--','--host','127.0.0.1','--port','5173') `
     -WorkingDirectory $Frontend `
     -NoNewWindow `
     -PassThru
+$env:VITE_AUTH_METHOD = $null
 
 # ---- Ctrl+C handler: 200ms grace + taskkill /F /T for orphans --------
 $CancelHandler = $null

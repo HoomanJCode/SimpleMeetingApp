@@ -170,14 +170,12 @@ trap cleanup INT TERM
 echo
 cat <<'TEST_BANNER'
 ┌───────────────────────────────────────────────────────────────┐
-│  TEST MODE - dummy OAuth, no Google interaction required       │
+│  TEST MODE - email/password auth, no Google OAuth required       │
 │                                                                 │
-│  · Auth: backend exposes POST /api/test/login (dev-only).       │
-│    Any {id,email,name} body mints a valid JWT locally.          │
-│  · The frontend's 'Sign in with Google' button is wired up      │
-│    identically; the only thing that changes between TEST and    │
-│    PROD is whether the backend hits Google or mocks the reply.  │
-│  · Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.sh.   │
+│  * Auth: Sign In with email + password. Backend auto-registers    │
+│    new users on first login. No Google account needed.            │
+│  * Test routes (/api/test/*) enabled for E2E tests.               │
+│  * Enabled via ENABLE_TEST_ROUTES=1 from scripts/test-env.sh.     │
 │                                                                 │
 │  Want REAL Google OAuth? Ctrl+C and run instead:                │
 │      scripts/prod.sh             (Linux / macOS, Bash 4+)        │
@@ -202,7 +200,9 @@ env $(backend_env_prefix test) \
 BACKEND_PID=$!
 
 # ---- Spawn frontend (no env overlay -- clean parent env is correct) ---
-npm --prefix "$FRONTEND" run dev -- --host 127.0.0.1 --port 5173 \
+# VITE_AUTH_METHOD tells the frontend which auth mode to use without
+# needing a backend API call (which would fail on cold start).
+VITE_AUTH_METHOD=userpass npm --prefix "$FRONTEND" run dev -- --host 127.0.0.1 --port 5173 \
     &> >(sed 's/^/[frontend] /') &
 FRONTEND_PID=$!
 

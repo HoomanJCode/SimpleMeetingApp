@@ -103,10 +103,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     configureApiClient(getToken, getRefreshToken, setTokens, logout);
 
-    // Fetch auth method from backend
-    getAuthMethod()
-      .then((res) => setAuthMethod(res.method))
-      .catch(() => setAuthMethod('google')); // Default to google if endpoint unavailable
+    // Check Vite env var first (available immediately, no network needed).
+    // Falls back to backend API call only if the Vite var is not set.
+    const viteMethod = import.meta.env.VITE_AUTH_METHOD;
+    if (viteMethod === 'userpass' || viteMethod === 'google') {
+      setAuthMethod(viteMethod);
+    } else {
+      getAuthMethod()
+        .then((res) => setAuthMethod(res.method))
+        .catch(() => setAuthMethod('google'));
+    }
 
     if (getRefreshToken()) {
       refreshUser().finally(() => setIsLoading(false));
