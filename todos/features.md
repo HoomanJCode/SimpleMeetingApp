@@ -148,7 +148,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 6. Configurable Ports via GitHub Secrets (Optional)
+## 6. Configurable Ports via GitHub Secrets (Optional) ✅ Done (6236483)
 
 **Request:** Make the backend port (3001) and frontend port (5173) configurable via optional GitHub Secrets (`BACKEND_PORT`, `FRONTEND_PORT`) so the CI workflow and E2E tests can run on different ports when the defaults are already in use on the deployment server.
 
