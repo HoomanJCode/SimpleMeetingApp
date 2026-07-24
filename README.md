@@ -71,11 +71,19 @@ ports 3001/5173 held by zombie processes, run `npm run kill`.
 
 ### Production-like mode (real Google OAuth)
 
-If you have real `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` + a `JWT_SECRET` in `backend/.env`:
+If you have (or want to set up) real Google OAuth credentials, generate `backend/.env`
+interactively:
 
 ```bash
-npm run dev:real   # backend reads .env, test routes are disabled
+npm run env:wizard   # walks you through every variable, validates input, generates a JWT_SECRET
+npm run dev:real     # backend reads .env, test routes are disabled
 ```
+
+The wizard needs your Google OAuth client ID + secret (create one at
+[Google Cloud Console](https://console.cloud.google.com/) →
+APIs & Services → Credentials → Web app, with redirect URI
+`http://localhost:3001/api/auth/google/callback`). It writes a normal
+`backend/.env` file with 0600 permissions; subsequent edits are just a hand-edit away.
 
 ### Manual per-subproject setup (legacy)
 
@@ -162,6 +170,7 @@ to debug a single piece in isolation.
 | `npm run db:reset`         | Delete the SQLite DB file; next backend start recreates + migrates + seeds                           |
 | `npm run db:seed`          | Print info about when seed runs (seed is automatic on first boot of a fresh DB)                      |
 | `npm run db:path`          | Print absolute path of the SQLite file                                                               |
+| `npm run env:wizard`      | Interactive wizard to create `backend/.env` for `dev:real` mode (validates input, generates JWT)      |
 | `npm run lint`             | Type-check both backend + frontend                                                                   |
 | `npm run build`            | Build backend (`tsc`) + frontend (`tsc -b && vite build`)                                            |
 | `npm run start`            | Run the production backend (assumes you've already built; serves frontend `dist/`)                   |
