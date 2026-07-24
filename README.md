@@ -71,19 +71,34 @@ ports 3001/5173 held by zombie processes, run `npm run kill`.
 
 ### Production-like mode (real Google OAuth)
 
-If you have (or want to set up) real Google OAuth credentials, generate `backend/.env`
-interactively:
+If you have (or want to set up) real Google OAuth credentials, just run `npm run dev:real`.
+If `backend/.env` doesn't exist yet, the runner auto-detects that and launches
+`npm run env:wizard` first, then continues into REAL mode once your answers are saved.
 
 ```bash
+npm run dev:real   # backend reads .env, test routes are disabled
+# — or, equivalently, if you want to set up. env in isolation first:
 npm run env:wizard   # walks you through every variable, validates input, generates a JWT_SECRET
-npm run dev:real     # backend reads .env, test routes are disabled
 ```
 
-The wizard needs your Google OAuth client ID + secret (create one at
-[Google Cloud Console](https://console.cloud.google.com/) →
+Both flows land you in the same place: a normal `backend/.env` written with owner-only
+permissions (best-effort on Windows). You'll need a Google OAuth client ID + secret
+(create one at [Google Cloud Console](https://console.cloud.google.com/) →
 APIs & Services → Credentials → Web app, with redirect URI
-`http://localhost:3001/api/auth/google/callback`). It writes a normal
-`backend/.env` file with 0600 permissions; subsequent edits are just a hand-edit away.
+`http://localhost:3001/api/auth/google/callback`).
+
+Behavior of the auto-wizard check depends on whether stdin is an interactive TTY:
+
+| Context                                  | What `npm run dev:real` does                                                                 |
+|------------------------------------------|------------------------------------------------------------------------------------------------|
+| `backend/.env` exists                    | Boots straight into REAL mode.                                                                |
+| `backend/.env` missing, interactive TTY  | Launches `npm run env:wizard` inline, waits, then boots once `.env` is saved.                 |
+| `backend/.env` missing, CI / piped       | Exits 1 with a clear hint to run `npm run env:wizard` first or pass `--no-wizard + .env handled by your deploy script`. |
+| `backend/.env` missing, `--no-wizard`    | Exits 1 (the flag suppresses auto-launch but still demands the file for safe_backend startup). |
+
+Cross-platform: the check uses `process.stdin.isTTY` and Node's built-in
+`child_process.spawnSync({ stdio: 'inherit' })`, which identify and reuse the real
+terminal identically on Windows, macOS, and Linux.
 
 ### Manual per-subproject setup (legacy)
 
@@ -163,7 +178,7 @@ to debug a single piece in isolation.
 |----------------------------|------------------------------------------------------------------------------------------------------|
 | `npm run setup`            | Install deps for root + backend + frontend + tests; install Playwright Chromium                       |
 | `npm run dev`              | Start backend + frontend concurrently in TEST mode (dummy OAuth, `/api/test/*` enabled)              |
-| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes)                   |
+| `npm run dev:real`         | Same as `dev` but backend reads `backend/.env` (real Google OAuth, no test routes). If `.env` is missing AND stdin is a TTY, auto-launches `env:wizard` first. Pass `--no-wizard` (passed through `scripts/dev.js`) to skip that check in CI / Docker. |
 | `npm run dev:be`           | Start only the backend (test mode)                                                                   |
 | `npm run dev:fe`           | Start only the frontend                                                                              |
 | `npm run kill`             | Free ports 3001 + 5173 (kills zombie node.exe after interrupted runs)                                |
