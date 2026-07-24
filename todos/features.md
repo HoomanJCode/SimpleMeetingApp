@@ -56,3 +56,30 @@ Requested features to implement. Keep adding as you think of them.
 - File storage: local disk (simpler, needs .gitignore for uploads/) vs cloud (S3, Cloudinary)?
 - Max file size / allowed formats?
 - Max number of photos per meeting?
+
+---
+
+## 3. Calendar View for Meetings
+
+**Request:** A calendar page that displays meetings as events on a visual calendar, so users can see their schedule at a glance.
+
+**Scope:**
+- **Frontend page:** New `CalendarPage.tsx` at `/calendar` route with a month/week view calendar component.
+- **Calendar library:** Integrate a React calendar library (e.g. `react-big-calendar`, `fullcalendar`, or a lighter option like `react-day-picker` with custom month grid).
+- **Data:** Fetch meetings from the existing `GET /api/meetings` endpoint. Filter to show upcoming meetings by default.
+- **UI:** Each meeting appears as an event dot/badge on its date. Clicking opens a popover or navigates to the meeting detail page.
+- **Navigation:** Add "Calendar" link to the header/nav bar.
+- **Responsive:** Mobile-friendly — month view on desktop, agenda/list view on small screens.
+- **Theming:** Support light/dark theme matching the existing ThemeProvider.
+
+**Files:**
+- `frontend/src/pages/CalendarPage.tsx` — new calendar page component
+- `frontend/src/App.tsx` — add `/calendar` route
+- `frontend/src/components/layout/Header.tsx` — add Calendar nav link
+- `frontend/src/types/index.ts` — may need CalendarEvent adapter type
+
+**Open questions:**
+- Which calendar library? `react-big-calendar` (full-featured, heavier) vs `react-day-picker` v9 (lighter, modern, month grid) vs `fullcalendar` (most features, largest bundle)?
+- Month view only, or also week/day views?
+- Show all meetings or only user's joined/owned meetings?
+- Color-code by meeting status (upcoming/ongoing/cancelled)?
