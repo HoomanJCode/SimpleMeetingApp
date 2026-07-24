@@ -111,3 +111,37 @@ Requested features to implement. Keep adding as you think of them.
 - Build custom with CSS/Framer Motion or use a library like `react-chrono`?
 - Vertical scroll (more traditional) or horizontal scroll (more modern)?
 - Infinite scroll/pagination for large meeting sets?
+
+---
+
+## 5. Tags / Labels for Events
+
+**Request:** Allow organizers to add tags/labels to meetings (e.g. "workshop", "social", "urgent", "remote") so users can categorize, filter, and quickly identify event types.
+
+**Scope:**
+- **Database:** New `tags` table (id, name TEXT UNIQUE, color TEXT) and `meeting_tags` junction table (meeting_id FK, tag_id FK). Seed a set of default tags.
+- **Backend types:** Add `Tag` interface (`id`, `name`, `color`). Extend `Meeting` to include `tags?: Tag[]`.
+- **Backend API:** `GET /api/tags` — list available tags. Extend `createMeeting`/`updateMeeting` to accept `tagIds`. Include tags in meeting responses.
+- **Frontend MeetingForm:** Multi-select tag picker (chips with colors) when creating/editing a meeting.
+- **Frontend MeetingCard:** Show tag chips on meeting cards in the list view.
+- **Frontend MeetingDetail:** Show tag chips on the detail page.
+- **Frontend MeetingList:** Filter meetings by tag (click a tag chip to filter).
+- **Calendar & Timeline:** Show tag colors on calendar events and timeline cards.
+
+**Files:**
+- `backend/src/db/migrations/` — new migration for tags + meeting_tags tables
+- `backend/src/types/models.ts` — Tag interface, extend Meeting
+- `backend/src/services/meetingService.ts` — accept tagIds, join tags in queries
+- `backend/src/services/meetingSchemas.ts` — tagIds validation
+- `backend/src/routes/meeting.routes.ts` — GET /tags endpoint, tagIds in create/update
+- `frontend/src/types/index.ts` — Tag type, extend Meeting
+- `frontend/src/api/meetings.ts` — fetchTags(), pass tagIds in create/update
+- `frontend/src/components/meeting/MeetingForm.tsx` — tag picker with colored chips
+- `frontend/src/components/meeting/MeetingCard.tsx` — tag chips display
+- `frontend/src/components/meeting/MeetingDetail.tsx` — tag chips display
+- `frontend/src/components/meeting/MeetingList.tsx` — tag filter
+
+**Open questions:**
+- Predefined tags (admin-managed) vs user-created tags?
+- How many tags per meeting (max)?
+- Tag colors: predefined palette or custom hex?
