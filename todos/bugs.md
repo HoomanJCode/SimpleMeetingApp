@@ -1,41 +1,45 @@
 # Bug Tracker
 
-Reported bugs to fix. Keep adding as you find them.
+Report bugs here with a brief description. I'll add root cause analysis and file paths.
 
 ---
 
-## 1. Calendar icon invisible in dark mode
+## ✅ 1. Calendar icon invisible in dark mode
 
 **Where:** Create/Edit Meeting form — the `datetime-local` input  
-**What:** The browser-native calendar icon on `<input type="datetime-local">` renders black-on-dark in dark theme, making it nearly invisible.  
-**Root cause:** The input has `dark:bg-gray-900` background but no `color-scheme: dark` CSS property. Browsers use the `color-scheme` property to decide whether to render native form controls (calendar icon, arrows) in light or dark variant.  
-**File:** `frontend/src/components/meeting/MeetingForm.tsx` — the `#meeting-datetime` input.  
-**Fix:** Add `[color-scheme:dark]` (via Tailwind's `dark:[color-scheme:dark]`) or set `color-scheme: dark` on the input when dark mode is active. Alternatively, apply it globally on `<html>` or `<body>`.
+**What:** The browser-native calendar icon on `<input type="datetime-local">` rendered black-on-dark in dark theme, making it nearly invisible.  
+**Root cause:** The input had `dark:bg-gray-900` background but no `color-scheme: dark` CSS property. Browsers use `color-scheme` to decide whether to render native form controls in light or dark variant.  
+**Fix:** Added `dark:[color-scheme:dark]` Tailwind arbitrary property to the datetime-local input.  
+**Commit:** `070c296`
 
 ---
 
-## 2. "Stay or Leave?" popup after successful meeting creation
+## ✅ 2. "Stay or Leave?" popup after successful meeting creation
 
 **Where:** Create Meeting page — after clicking "Create Meeting" and the API succeeds  
-**What:** The NavigationBlocker popup ("Unsaved Changes — Stay or Leave?") appears even though the meeting was created successfully and navigation to the detail page is intentional.  
-**Root cause:** `isDirty` is `true` when `navigate()` fires because the form data hasn't been cleared yet. The router sees a dirty form and blocks navigation.  
-**File:** `frontend/src/pages/CreateMeetingPage.tsx`  
-**Fix:** In `handleSubmit`, set `isDirty` to `false` before calling `navigate()` — or clear dirty state immediately after a successful `create()` call.
+**What:** The NavigationBlocker popup appeared even though the meeting was created successfully.  
+**Root cause:** `navigate()` is synchronous — it checks `useBlocker` callbacks before React re-renders the NavigationBlocker with the new `when=false` prop. Setting `isDirty=false` before `navigate()` wasn't enough.  
+**Fix:** Deferred navigation with `setTimeout(() => navigate(...), 0)` + `submittedRef` guard + `setIsDirty(false)`.  
+**Commit:** `55b69b3`
 
 ---
 
-## 3. LoginModal input fields lose focus after every keystroke
+## ✅ 3. LoginModal input fields lose focus after every keystroke
 
-**Where:** Sign In modal (LoginModal) — after signing out and trying to sign in again  
-**What:** Typing in the email/password fields only allows one character, then focus is lost. Text also appears to go white/invisible.  
-**Root cause:** The `Modal` component's `useEffect` depends on `handleKeyDown`, which depends on `onClose`. LoginModal's parent (Header) passes `onClose={() => setLoginModalOpen(false)}` — a new inline arrow function on every render. This causes `handleKeyDown` to be recreated, which triggers the Modal's effect cleanup (`previousFocusRef.current.focus()` — steals focus back to the trigger button). The Input and Modal also lack dark-mode CSS classes (`dark:bg-*`, `dark:text-*`), causing white-on-white text when the global theme is dark.  
-**Files:**
-- `frontend/src/components/ui/Modal.tsx` — unstable `handleKeyDown` callback, no dark mode classes  
-- `frontend/src/components/ui/Input.tsx` — no `dark:` variants on base styles  
-- `frontend/src/components/auth/LoginModal.tsx` — passes inline `onClose` arrow  
-**Fix:**  
-1. In `Modal.tsx`: store `onClose` in a ref and use it in `handleKeyDown` via the ref (removes `onClose` from the dependency array, making `handleKeyDown` stable).  
-2. In `Modal.tsx` / `Input.tsx`: add `dark:` Tailwind variants (bg, text, border colors).
+**Where:** Sign In modal — after signing out and trying to sign in again  
+**What:** Typing in the email/password fields only allowed one character, then focus was lost. Text appeared white/invisible.  
+**Root cause:** Modal's `handleKeyDown` depended on `onClose` (inline arrow function, recreated every render). This triggered `useEffect` re-runs whose cleanup stole focus via `previousFocusRef.current.focus()`. Modal and Input also lacked dark-mode CSS.  
+**Fix:** Stored `onClose` in a ref for stable `handleKeyDown`. Added `dark:` variants to Modal and Input components.  
+**Commit:** `a05b06e`
+
+---
+
+## ✅ 4. Footer leaks tech stack
+
+**Where:** Footer component  
+**What:** "Built with React, Express & SQLite" reveals private project info.  
+**Fix:** Removed tech stack disclosure; footer now just shows "© {year} IrMeetingApp".  
+**Commit:** `90c2bef`
 
 ---
 
