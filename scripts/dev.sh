@@ -42,6 +42,22 @@ ENV_PATH="$BACKEND/.env"
 WIZARD="$ROOT/scripts/env-wizard.sh"
 TEST_ENV="$ROOT/scripts/test-env.sh"
 
+# Pre-flight: refuse to launch dev processes if any subproject is
+# missing its npm-installed dependencies. Fail fast with a clear
+# hint rather than waiting for npm to error out at startup.
+missing_deps=()
+for sub in backend frontend tests; do
+    if [ ! -d "$ROOT/$sub/node_modules" ]; then
+        missing_deps+=("$sub/node_modules")
+    fi
+done
+if [ ${#missing_deps[@]} -gt 0 ]; then
+    echo "✗ missing dependencies: ${missing_deps[*]}" >&2
+    echo "  Run scripts/setup.sh first to install everything." >&2
+    echo "  (Each subproject has its own node_modules; install one place is not enough.)" >&2
+    exit 1
+fi
+
 # ---- arg parsing --------------------------------------------------------
 ONLY_BE=0
 ONLY_FE=0

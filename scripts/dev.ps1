@@ -69,6 +69,22 @@ $EnvPath       = Join-Path $Backend '.env'
 $WizardPath    = Join-Path $PSScriptRoot 'env-wizard.ps1'
 $TestEnvPath   = Join-Path $PSScriptRoot 'test-env.ps1'
 
+# Pre-flight: refuse to launch dev processes if any subproject is
+# missing its npm-installed dependencies. Fail fast with a clear
+# hint rather than waiting for npm to error out at startup.
+$missingDeps = @()
+foreach ($sub in @('backend','frontend','tests')) {
+    if (-not (Test-Path (Join-Path (Join-Path $Root $sub) 'node_modules'))) {
+        $missingDeps += "$sub/node_modules"
+    }
+}
+if ($missingDeps.Count -gt 0) {
+    Write-Host ('✗ missing dependencies: ' + ($missingDeps -join ', ')) -ForegroundColor Red
+    Write-Host '  Run scripts/setup.ps1 first to install everything.' -ForegroundColor Yellow
+    Write-Host '  (Each subproject has its own node_modules; install one place is not enough.)' -ForegroundColor DarkGray
+    exit 1
+}
+
 # Console.TTY? Used only by the --real auto-wizard branch.
 $IsInteractive = -not [Console]::IsInputRedirected
 
