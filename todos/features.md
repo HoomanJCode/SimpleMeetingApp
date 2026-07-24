@@ -83,3 +83,31 @@ Requested features to implement. Keep adding as you think of them.
 - Month view only, or also week/day views?
 - Show all meetings or only user's joined/owned meetings?
 - Color-code by meeting status (upcoming/ongoing/cancelled)?
+
+---
+
+## 4. Event Timeline View
+
+**Request:** A scrolling horizontal/vertical timeline that shows events along a chronological line. Users scroll through time and see meeting cards pop up along the line at their corresponding dates.
+
+**Scope:**
+- **Frontend page:** New `TimelinePage.tsx` at `/timeline` route with an interactive timeline component.
+- **Layout:** A central timeline line (vertical on desktop, could be horizontal on mobile) with event cards branching off at their date positions. Scrolling moves along the timeline; events animate into view.
+- **Data:** Fetch meetings from `GET /api/meetings`. Sort chronologically.
+- **UI details:** Each event appears as a card/dot connected to the timeline by a line. Card shows title, date/time, status badge. Clicking navigates to meeting detail.
+- **Visual design:** Smooth scroll animations, parallax-like reveal as events enter viewport. Milestone markers for months/years along the line. "You are here" indicator for current date.
+- **Filters:** Toggle to show all meetings or only user's meetings. Filter by status (upcoming/ongoing/past/cancelled).
+- **Navigation:** Add "Timeline" link to the header/nav bar.
+- **Theming:** Full light/dark support matching ThemeProvider.
+- **Responsive:** Vertical timeline on desktop, compact horizontal scroll on mobile.
+
+**Files:**
+- `frontend/src/pages/TimelinePage.tsx` — new timeline page
+- `frontend/src/App.tsx` — add `/timeline` route
+- `frontend/src/components/layout/Header.tsx` — add Timeline nav link
+- `frontend/src/components/meeting/` — may extract a reusable `TimelineCard` component
+
+**Open questions:**
+- Build custom with CSS/Framer Motion or use a library like `react-chrono`?
+- Vertical scroll (more traditional) or horizontal scroll (more modern)?
+- Infinite scroll/pagination for large meeting sets?
