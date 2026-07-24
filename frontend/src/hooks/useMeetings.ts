@@ -41,7 +41,7 @@ export function useMeetingList(params?: Record<string, string | number>) {
   return { ...data, meetings: data?.meetings ?? [], isLoading, error, refetch: fetch };
 }
 
-export function useMeeting(id: string | undefined) {
+export function useMeeting(id: string | undefined, userId?: string | null) {
   const [data, setData] = useState<MeetingResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function useMeeting(id: string | undefined) {
       .then(setData)
       .catch((err) => setError(err.message || 'Failed to load meeting'))
       .finally(() => setIsLoading(false));
-  }, [id]);
+  }, [id, userId]);
 
   const setMeeting = useCallback((meeting: MeetingResponse) => setData(meeting), []);
 

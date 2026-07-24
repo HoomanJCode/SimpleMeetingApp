@@ -14,7 +14,7 @@ export default function MeetingDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { meeting, isLoading, error, setMeeting } = useMeeting(id);
+  const { meeting, isLoading, error, setMeeting } = useMeeting(id, user?.id);
   const { join, isLoading: isJoining } = useJoinMeeting();
   const { leave, isLoading: isLeaving } = useLeaveMeeting();
   const { remove, isLoading: isDeleting } = useDeleteMeeting();
