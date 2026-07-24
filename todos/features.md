@@ -26,7 +26,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 2. Add Cover Photo and Photo Gallery to Meetings
+## 2. Add Cover Photo and Photo Gallery to Meetings ✅ Done (58ddab2)
 
 **Request:** Meetings should support a cover photo (single image) and a photo gallery (multiple images) to make events more visually engaging.
 
