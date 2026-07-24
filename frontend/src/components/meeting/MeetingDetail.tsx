@@ -7,6 +7,7 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { ParticipantList } from './ParticipantList';
 import { useAuth } from '../../auth/AuthContext';
 import { useRef, useState } from 'react';
+import { ImageLightbox } from './ImageLightbox';
 import type { MeetingResponse, MeetingPhoto } from '../../types';
 
 interface MeetingDetailProps {
@@ -50,6 +51,13 @@ export function MeetingDetail({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const photos = meeting.photos ?? [];
 
+  // Build a single list of viewable images for the lightbox (cover first, then gallery).
+  const lightboxPhotos = [
+    ...(meeting.coverPhotoUrl ? [{ id: 'cover', url: meeting.coverPhotoUrl, alt: meeting.title }] : []),
+    ...photos.map((photo) => ({ id: photo.id, url: photo.url, alt: '' })),
+  ];
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+
   const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Step 1: Grab the selected gallery photo and hand it off to the parent handler.
     const file = e.target.files?.[0];
@@ -62,13 +70,18 @@ export function MeetingDetail({
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Step 1: Cover photo hero — show the stored cover or a placeholder. */}
       {meeting.coverPhotoUrl ? (
-        <div className="w-full h-56 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          onClick={() => setActivePhotoIndex(0)}
+          className="block w-full h-56 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 cursor-zoom-in"
+          aria-label="View cover photo full-size"
+        >
           <img
             src={meeting.coverPhotoUrl}
             alt={meeting.title}
             className="w-full h-full object-cover"
           />
-        </div>
+        </button>
       ) : (
         <div className="w-full h-32 sm:h-48 rounded-xl bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/40 dark:to-primary-800/30 border border-dashed border-primary-300 dark:border-primary-700 flex items-center justify-center">
           <div className="text-center">
@@ -181,14 +194,30 @@ export function MeetingDetail({
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {photos.map((photo: MeetingPhoto) => (
-              <div key={photo.id} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700">
+            {photos.map((photo: MeetingPhoto, index: number) => (
+              <div
+                key={photo.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActivePhotoIndex(meeting.coverPhotoUrl ? index + 1 : index)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActivePhotoIndex(meeting.coverPhotoUrl ? index + 1 : index);
+                  }
+                }}
+                className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-left cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="View photo full-size"
+              >
                 <img src={photo.url} alt="" className="w-full h-full object-cover" />
                 {isHost && !isPast && onDeletePhoto && (
                   <button
                     type="button"
-                    onClick={() => onDeletePhoto(photo.id)}
-                    className="absolute top-2 right-2 bg-gray-900/70 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeletePhoto(photo.id);
+                    }}
+                    className="absolute top-2 right-2 bg-gray-900/70 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
                     aria-label="Delete photo"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,6 +269,15 @@ export function MeetingDetail({
           Are you sure you want to cancel &quot;{meeting.title}&quot;? Participants will be notified and the meeting will remain visible as cancelled.
         </p>
       </Modal>
+
+      {/* Lightbox for full-size cover/gallery photo viewing */}
+      <ImageLightbox
+        photos={lightboxPhotos}
+        currentIndex={activePhotoIndex ?? 0}
+        isOpen={activePhotoIndex !== null}
+        onClose={() => setActivePhotoIndex(null)}
+        onNavigate={setActivePhotoIndex}
+      />
     </div>
   );
 }
