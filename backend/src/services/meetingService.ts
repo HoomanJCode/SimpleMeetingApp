@@ -1,5 +1,5 @@
 import { getDb } from '../db/connection';
-import { Meeting, MeetingFilters, PaginatedResult } from '../types/models';
+import { Meeting, MeetingFilters, PaginatedResult, MeetingPhoto } from '../types/models';
 import { CreateMeetingInput, UpdateMeetingInput } from './meetingSchemas';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
@@ -22,6 +22,7 @@ interface DbMeetingRow {
   location: string;
   capacity: number;
   status: string;
+  cover_photo_url: string | null;
   created_at: string;
   updated_at: string;
   host_name?: string;
@@ -50,6 +51,7 @@ function mapDbMeeting(row: DbMeetingRow, userId?: string, isJoined?: boolean): M
     location: row.location,
     capacity: row.capacity,
     status: row.status as Meeting['status'],
+    coverPhotoUrl: row.cover_photo_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     hostName: row.host_name,
@@ -71,8 +73,8 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
   const now = new Date().toISOString();
 
   const insertMeeting = db.prepare(`
-    INSERT INTO meetings (id, host_id, title, description, date_time, location, capacity, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO meetings (id, host_id, title, description, date_time, location, capacity, cover_photo_url, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertParticipant = db.prepare(`
@@ -83,7 +85,7 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
   const host = db.prepare('SELECT name, avatar_url FROM users WHERE id = ?').get(hostId) as { name: string; avatar_url: string | null } | undefined;
 
   const transaction = db.transaction(() => {
-    insertMeeting.run(id, hostId, data.title, data.description, data.dateTime, data.location, data.capacity, now, now);
+    insertMeeting.run(id, hostId, data.title, data.description, data.dateTime, data.location, data.capacity, data.coverPhotoUrl ?? null, now, now);
     insertParticipant.run(id, hostId);
   });
 
@@ -100,6 +102,7 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
     location: data.location,
     capacity: data.capacity,
     status: 'upcoming',
+    coverPhotoUrl: data.coverPhotoUrl ?? null,
     createdAt: now,
     updatedAt: now,
     hostName: host?.name,
@@ -206,6 +209,15 @@ export function getMeetingById(id: string, userId?: string): Meeting {
 }
 
 /**
+ * Gets a single meeting by ID with full details including photos.
+ */
+export function getMeetingByIdWithPhotos(id: string, userId?: string): Meeting {
+  const meeting = getMeetingById(id, userId);
+  const photos = getMeetingPhotos(id);
+  return { ...meeting, photos };
+}
+
+/**
  * Updates a meeting. Only the host can update.
  */
 export function updateMeeting(id: string, userId: string, data: UpdateMeetingInput): Meeting {
@@ -248,6 +260,10 @@ export function updateMeeting(id: string, userId: string, data: UpdateMeetingInp
   if (data.status !== undefined) {
     updates.push('status = ?');
     params.push(data.status);
+  }
+  if (data.coverPhotoUrl !== undefined) {
+    updates.push('cover_photo_url = ?');
+    params.push(data.coverPhotoUrl);
   }
 
   if (updates.length === 0) {
@@ -428,6 +444,73 @@ export function getParticipants(meetingId: string) {
     avatarUrl: r.user_avatar_url ?? null,
     joinedAt: r.created_at,
   }));
+}
+
+/**
+ * Gets photos for a meeting.
+ */
+export function getMeetingPhotos(meetingId: string): MeetingPhoto[] {
+  const db = getDb();
+  const rows = db
+    .prepare('SELECT id, meeting_id, url, created_at FROM meeting_photos WHERE meeting_id = ? ORDER BY created_at ASC')
+    .all(meetingId) as { id: string; meeting_id: string; url: string; created_at: string }[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    meetingId: r.meeting_id,
+    url: r.url,
+    createdAt: r.created_at,
+  }));
+}
+
+/**
+ * Adds a photo to a meeting. Only the host can add photos.
+ */
+export function addMeetingPhoto(meetingId: string, userId: string, url: string): MeetingPhoto {
+  const db = getDb();
+
+  const meeting = db.prepare('SELECT host_id FROM meetings WHERE id = ?').get(meetingId) as { host_id: string } | undefined;
+  if (!meeting) {
+    throw new NotFoundError('Meeting');
+  }
+  if (meeting.host_id !== userId) {
+    throw new ForbiddenError('Only the host can add photos');
+  }
+
+  const id = crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const now = new Date().toISOString();
+
+  db.prepare('INSERT INTO meeting_photos (id, meeting_id, url, created_at) VALUES (?, ?, ?, ?)').run(id, meetingId, url, now);
+
+  logger.info({ meetingId, photoId: id }, 'Photo added to meeting');
+
+  return { id, meetingId, url, createdAt: now };
+}
+
+/**
+ * Deletes a photo from a meeting. Only the host can delete photos.
+ */
+export function deleteMeetingPhoto(meetingId: string, photoId: string, userId: string): { url: string } {
+  const db = getDb();
+
+  const meeting = db.prepare('SELECT host_id FROM meetings WHERE id = ?').get(meetingId) as { host_id: string } | undefined;
+  if (!meeting) {
+    throw new NotFoundError('Meeting');
+  }
+  if (meeting.host_id !== userId) {
+    throw new ForbiddenError('Only the host can delete photos');
+  }
+
+  const photo = db.prepare('SELECT url FROM meeting_photos WHERE id = ? AND meeting_id = ?').get(photoId, meetingId) as { url: string } | undefined;
+  if (!photo) {
+    throw new NotFoundError('Photo');
+  }
+
+  db.prepare('DELETE FROM meeting_photos WHERE id = ? AND meeting_id = ?').run(photoId, meetingId);
+
+  logger.info({ meetingId, photoId }, 'Photo deleted from meeting');
+
+  return { url: photo.url };
 }
 
 /**

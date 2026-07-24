@@ -9,6 +9,7 @@ export const createMeetingSchema = z.object({
   }, 'dateTime must be a valid ISO 8601 date in the future'),
   location: z.string().min(2, 'Location must be at least 2 characters').max(300, 'Location must be under 300 characters'),
   capacity: z.number().int('Capacity must be a whole number').min(2, 'Minimum capacity is 2').max(10000, 'Maximum capacity is 10000'),
+  coverPhotoUrl: z.string().url().nullable().optional(),
 });
 
 export const updateMeetingSchema = z.object({
@@ -21,6 +22,7 @@ export const updateMeetingSchema = z.object({
   location: z.string().min(2).max(300).optional(),
   capacity: z.number().int().min(2).max(10000).optional(),
   status: z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
+  coverPhotoUrl: z.string().url().nullable().optional(),
 });
 
 export const meetingQuerySchema = z.object({

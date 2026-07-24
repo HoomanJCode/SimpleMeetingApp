@@ -50,6 +50,12 @@ export function createApp() {
     generalLimiter(req, res, next);
   });
 
+  // Serve uploaded photos
+  const uploadsPath = path.resolve(process.cwd(), 'uploads');
+  if (fs.existsSync(uploadsPath)) {
+    app.use('/uploads', express.static(uploadsPath, { maxAge: '7d' }));
+  }
+
   // Routes
   app.use('/api', routes);
 
