@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "IrMeetingApp - tech meetup discovery platform (root orchestrator scripts)",
   "scripts": {
-    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend && npm install --prefix tests && npx --prefix tests playwright install chromium",
+    "setup:ps": "pwsh -NoProfile -File scripts/setup.ps1",
+    "setup:sh": "bash scripts/setup.sh",
     "dev:ps": "pwsh -NoProfile -File scripts/dev.ps1",
     "dev:sh": "bash scripts/dev.sh",
     "dev:real:ps": "pwsh -NoProfile -File scripts/dev.ps1 --real",
