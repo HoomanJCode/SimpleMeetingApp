@@ -65,6 +65,28 @@ Both scripts auto-install any missing npm dependencies on first run (root + back
 - PowerShell 5.1+ on Windows (any Linux/macOS bash 3+ for non-Windows users)
 - (Production mode only) A Google Cloud Console project with OAuth 2.0 credentials
   - Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
+  - Full step-by-step walkthrough (screenshots-equivalent instructions, troubleshooting FAQ): **[docs/google-oauth-setup.md](documents/google-oauth-setup.md)**
+
+### Google OAuth credentials (production mode only)
+
+`scripts/prod.sh` / `scripts/prod.ps1` need three values written into `backend/.env`:
+
+| Variable                 | Where it comes from                                                                 |
+|--------------------------|--------------------------------------------------------------------------------------|
+| `GOOGLE_CLIENT_ID`       | "Your Client ID" in the OAuth-client-created modal (ends in `.apps.googleusercontent.com`) |
+| `GOOGLE_CLIENT_SECRET`   | "Your Client secret" in the same modal (starts with `GOCSPX-`) — **shown only once** |
+| `GOOGLE_REDIRECT_URI`    | The redirect URI you entered in the Cloud Console's "Authorized redirect URIs" field |
+
+Quick recap (the full walkthrough is in [docs/google-oauth-setup.md](documents/google-oauth-setup.md)):
+
+  1. Sign in to <https://console.cloud.google.com/> with your Gmail.
+  2. Create a new project (e.g. `IrMeetingApp Local`).
+  3. **APIs & Services → OAuth consent screen** → User type: **External** → fill app name + your Gmail → **Save and Continue** → add your Gmail as a **Test user**.
+  4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type: **Web application** → Authorized redirect URI: `http://localhost:3001/api/auth/google/callback` → **Create**.
+  5. Copy the **Client ID** + **Client secret** from the resulting modal.
+  6. Run `bash scripts/prod.sh` (or `pwsh -File scripts/prod.ps1`); the inline wizard pastes both values into `backend/.env` for you.
+
+> Why a separate doc instead of inline? Google Console's UI has 5+ screens with exact field-name requirements (and the `redirect_uri_mismatch` trap is unforgiving — byte-exact match required). Documents are easier to copy/paste from, follow on a second monitor, and link to from a Slack escalation than inline wizard text. The wizard still prints a condensed 6-step summary on first run, so you don't need to leave the terminal.
 
 ### Run the app
 
