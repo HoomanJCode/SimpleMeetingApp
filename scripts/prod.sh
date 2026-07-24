@@ -13,7 +13,7 @@
 #   3. Apply windowsCompat env overlay from scripts/test-env.sh to the
 #      backend. NO test secrets (real OAuth only).
 #   4. Spawn backend and frontend as native background jobs (via
-#      process substitution so $! is the npm PID, not a subshell).
+#      process substitution for direct, flicker-free output piping).
 #   5. Open http://localhost:5173 in the default browser.
 #   6. Clean shutdown via Ctrl+C + trap cleanup.
 #
@@ -291,17 +291,95 @@ cleanup() {
     local exit_code=$?
     echo
     echo "▶ Stopping servers..."
-    [ -n "$BACKEND_PID"  ] && kill -TERM "$BACKEND_PID"  2>/dev/null || true
-    [ -n "$FRONTEND_PID" ] && kill -TERM "$FRONTEND_PID" 2>/dev/null || true
-    sleep 0.3
-    [ -n "$BACKEND_PID"  ] && kill -KILL "$BACKEND_PID"  2>/dev/null || true
-    [ -n "$FRONTEND_PID" ] && kill -KILL "$FRONTEND_PID" 2>/dev/null || true
+    # Cross-platform TERM-grace-KILL on tracked PIDs. Linux + macOS
+    # this works cleanly. Windows Git Bash uses taskkill under the
+    # hood (see kill_tree). The tracked-PID path is best-effort --
+    # the port_scrub() loop below is the RELIABLE cleanup, because
+    # signal propagation across MSYS <-> native Windows process
+    # boundaries is unreliable.
+    [ -n "$BACKEND_PID"  ] && kill_tree "$BACKEND_PID"
+    [ -n "$FRONTEND_PID" ] && kill_tree "$FRONTEND_PID"
+    sleep 0.5
+    # Belt-and-suspenders port-scrub. THIS reliably frees 3001 + 5173
+    # on Windows Git Bash (verified live -- netstat + taskkill works
+    # where tracked-PID signal propagation fails across the MSYS
+    # boundary). On Linux / macOS, lsof + kill.
     for port in 3001 5173; do
-        if command -v lsof >/dev/null 2>&1; then
-            lsof -ti:"$port" 2>/dev/null | xargs -r kill -KILL 2>/dev/null || true
-        fi
+        port_scrub "$port"
     done
+    pkill -KILL -f "$ROOT/backend.*tsx"   2>/dev/null || true
+    pkill -KILL -f "$ROOT/frontend.*vite" 2>/dev/null || true
+    pkill -KILL -f "npm.*$ROOT/backend"  2>/dev/null || true
+    pkill -KILL -f "npm.*$ROOT/frontend" 2>/dev/null || true
+    # Quick port-answer diagnostic. If a port is still listening, print a
+    # hint but DO NOT escalate -- killing node.exe globally (formerly
+    # `taskkill //IM node.exe //F //T`) breaks the user's terminal, VS
+    # Code, and every other Node tool they have running. TIME_WAIT
+    # connections clear on their own within ~2 min; if the port is truly
+    # still bound, the user can re-run the script and port_scrub will
+    # handle it on the next pass.
+    if command -v curl >/dev/null 2>&1; then
+        for port in 3001 5173; do
+            if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$port/" >/dev/null 2>&1; then
+                echo "  (port $port still answering -- may be TIME_WAIT; will clear on re-run)" >&2
+            fi
+        done
+    fi
     exit "$exit_code"
+}
+
+# kill_tree PID -- graceful TERM+grace+KILL chain on tracked processes.
+# Best-effort: signal propagation across MSYS / native Windows isn't
+# always reliable, so port_scrub() below is the real cleanup. This
+# helper just gives a clean code path for the polite-shutdown attempt.
+kill_tree() {
+    local pid="$1"
+    [ -z "$pid" ] && return 0
+    if command -v taskkill.exe >/dev/null 2>&1; then
+        taskkill.exe //F //T //PID "$pid" 2>/dev/null || true
+    elif command -v taskkill >/dev/null 2>&1; then
+        taskkill //F //T //PID "$pid" 2>/dev/null || true
+    else
+        kill -TERM "$pid" 2>/dev/null || true
+        sleep 0.3
+        kill -KILL "$pid" 2>/dev/null || true
+    fi
+}
+
+# port_scrub PORT -- kill whatever process is listening on PORT. The
+# RELIABLE cross-platform cleanup: query the kernel directly for
+# whoever actually holds the port (instead of tracking parent -> child
+# signal propagation, which fails across MSYS <-> native Windows).
+# - Linux: lsof -ti:PORT -> kill -KILL
+# - macOS: lsof -ti:PORT -> kill -KILL
+# - Windows Git Bash: netstat -ano -> taskkill.exe //F //T (per PID)
+# port_scrub PORT -- see dev.sh's identical helper for the full why-
+# rationale. Short version: kill whatever process is listening on
+# PORT via lsof (Linux/macOS) or netstat+taskkill (Windows Git
+# Bash). PID regex `[1-9][0-9]*$` excludes PID 0 -- netstat can
+# surface a row whose last column is 0, and `taskkill //F //T //PID 0`
+# returns 'Access is denied' / would abort the chain under `set -e`.
+port_scrub() {
+    local port="$1"
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -ti:"$port" 2>/dev/null | xargs -r kill -KILL 2>/dev/null || true
+    fi
+    if command -v netstat >/dev/null 2>&1 && command -v taskkill.exe >/dev/null 2>&1; then
+        local port_pids
+        port_pids="$(netstat -ano 2>/dev/null \
+            | grep ":$port " \
+            | awk '{print $NF}' \
+            | grep -E '^[1-9][0-9]*$' \
+            | sort -u \
+            | tr '\n' ' ')"
+        local pid
+        for pid in $port_pids; do
+            [ -n "$pid" ] || continue
+            taskkill.exe //F //T //PID "$pid" >/dev/null 2>&1 \
+                || echo "  [port_scrub $port] taskkill //PID $pid returned $?" >&2
+        done
+    fi
+    return 0
 }
 trap cleanup INT TERM
 
@@ -309,8 +387,13 @@ echo
 echo "▶ Starting in PROD mode (real Google OAuth from backend/.env, test routes disabled)"
 echo
 
-# In real mode, `backend_env_prefix real` omits test secrets so the
-# backend reads backend/.env for OAuth values.
+# ---- Spawn backend ----------------------------------------------------
+# Process substitution `&> >(sed ...)` pipes output directly to the
+# terminal without intermediate files or polling -- this avoids the
+# visual flickering that `tail -F` + log-file buffering causes on
+# Windows Git Bash. The `sed` process dies on SIGPIPE when the npm
+# process exits; port_scrub + kill_tree handle cleanup reliably
+# regardless of which PID $! captures.
 env $(backend_env_prefix real) \
     npm --prefix "$BACKEND" run dev \
     &> >(sed 's/^/[backend] /') &
