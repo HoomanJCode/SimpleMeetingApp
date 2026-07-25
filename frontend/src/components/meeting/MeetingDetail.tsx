@@ -171,7 +171,7 @@ export function MeetingDetail({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add photo
+                <span>Add photo</span>
                 <input
                   ref={galleryInputRef}
                   type="file"
@@ -179,6 +179,7 @@ export function MeetingDetail({
                   onChange={handleGalleryFileChange}
                   className="sr-only"
                   disabled={isUploading}
+                  data-testid="gallery-photo-input"
                 />
               </label>
             </div>

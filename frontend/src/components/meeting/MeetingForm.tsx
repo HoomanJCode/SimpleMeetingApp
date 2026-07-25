@@ -34,6 +34,7 @@ export function MeetingForm({
   const [coverRemoved, setCoverRemoved] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
 
   // Step 1: Create (and revoke) a temporary object URL for the selected cover file.
   // This keeps memory clean when the file changes or the component unmounts.
@@ -84,16 +85,25 @@ export function MeetingForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Step 5: Send both the meeting fields and the cover photo state to the parent.
-    await onSubmit({
-      title,
-      description,
-      dateTime,
-      location,
-      capacity,
-      coverPhotoFile: coverFile,
-      coverPhotoRemoved: coverRemoved,
-    });
+    // Guard against double-submission: the button is disabled when isLoading,
+    // but keyboard-triggered submits (Enter) can still fire. A synchronous ref
+    // flag catches rapid re-entry before React re-renders with the disabled state.
+    if (isSubmittingRef.current || isLoading) return;
+    isSubmittingRef.current = true;
+    try {
+      // Step 5: Send both the meeting fields and the cover photo state to the parent.
+      await onSubmit({
+        title,
+        description,
+        dateTime,
+        location,
+        capacity,
+        coverPhotoFile: coverFile,
+        coverPhotoRemoved: coverRemoved,
+      });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   return (
@@ -201,13 +211,14 @@ export function MeetingForm({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {coverPreview ? 'Change cover photo' : 'Upload cover photo'}
+            <span>{coverPreview ? 'Change cover photo' : 'Upload cover photo'}</span>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/png,image/jpeg,image/gif,image/webp"
               onChange={handleFileChange}
               className="sr-only"
+              data-testid="cover-photo-input"
             />
           </label>
           <span className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF, WebP up to 5MB</span>
@@ -218,6 +229,7 @@ export function MeetingForm({
         <button
           type="submit"
           disabled={isLoading}
+          data-testid="meeting-form-submit"
           className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {isLoading ? 'Saving...' : submitLabel}
