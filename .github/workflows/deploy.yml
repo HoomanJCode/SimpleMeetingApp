@@ -96,11 +96,10 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'auto-generate' }}
           JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
           REFRESH_TOKEN_EXPIRATION: ${{ vars.REFRESH_TOKEN_EXPIRATION || '30d' }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-          DOMAIN: ${{ secrets.DOMAIN || '_' }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://localhost' }}
           SSL_CERT_B64: ${{ secrets.SSL_CERT_B64 || '' }}
           SSL_KEY_B64: ${{ secrets.SSL_KEY_B64 || '' }}
         run: |
@@ -159,11 +158,32 @@ jobs:
           EOF
           chmod 600 "$PROJECT_DIR/backend/.env"
 
-          # Quick sanity: JWT_SECRET must not be empty
-          [ -z "$(grep '^JWT_SECRET=$' "$PROJECT_DIR/backend/.env" 2>/dev/null)" ] || {
-            echo "❌ JWT_SECRET is empty!"
-            exit 1
-          }
+          # ── Auto-generate JWT_SECRET if not provided ────────────
+          # Try to preserve an existing secret from a prior deploy so that
+          # refresh tokens stay valid across restarts. Fall back to a new
+          # random secret when deploying for the first time.
+          if [ -z "$(grep '^JWT_SECRET=' "$PROJECT_DIR/backend/.env" | cut -d= -f2)" ]; then
+            EXISTING_SECRET=""
+            if [ -f "$PROJECT_DIR/backend/.env.prev" ]; then
+              EXISTING_SECRET=$(grep '^JWT_SECRET=' "$PROJECT_DIR/backend/.env.prev" | cut -d= -f2 | head -1)
+            fi
+            if [ -n "$EXISTING_SECRET" ] && [ ${#EXISTING_SECRET} -ge 32 ]; then
+              echo "🔑 Reusing JWT_SECRET from previous deploy"
+              sed -i "s|JWT_SECRET=|JWT_SECRET=${EXISTING_SECRET}|" "$PROJECT_DIR/backend/.env"
+            else
+              NEW_SECRET=$(openssl rand -hex 32 2>/dev/null || node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" || true)
+              if [ -z "$NEW_SECRET" ] || [ ${#NEW_SECRET} -lt 32 ]; then
+                echo "❌ Cannot generate JWT_SECRET — install openssl or node"
+                exit 1
+              fi
+              echo "🔑 Generated new JWT_SECRET (${#NEW_SECRET} chars)"
+              sed -i "s|JWT_SECRET=|JWT_SECRET=${NEW_SECRET}|" "$PROJECT_DIR/backend/.env"
+            fi
+          fi
+
+          # Persist .env for next deploy's JWT_SECRET reuse
+          cp "$PROJECT_DIR/backend/.env" "$PROJECT_DIR/backend/.env.prev"
+          chmod 600 "$PROJECT_DIR/backend/.env.prev"
 
           # ── Install dependencies + build backend ────────────────────
           echo "📦 Building backend..."
@@ -388,9 +408,17 @@ jobs:
           sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|${GOOGLE_CLIENT_ID}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_CLIENT_SECRET_PLACEHOLDER|${GOOGLE_CLIENT_SECRET}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_REDIRECT_URI_PLACEHOLDER|${GOOGLE_REDIRECT_URI}|g" /tmp/deploy_script.sh
+
+          # ── JWT_SECRET: if empty, let the deploy script auto-generate ─
+          if [ "$JWT_SECRET" = "auto-generate" ]; then
+            JWT_SECRET=''
+          fi
           sed -i "s|JWT_SECRET_PLACEHOLDER|${JWT_SECRET}|g" /tmp/deploy_script.sh
           sed -i "s|JWT_EXPIRATION_PLACEHOLDER|${JWT_EXPIRATION}|g" /tmp/deploy_script.sh
           sed -i "s|REFRESH_TOKEN_EXPIRATION_PLACEHOLDER|${REFRESH_TOKEN_EXPIRATION}|g" /tmp/deploy_script.sh
+
+          # ── FRONTEND_URL + DOMAIN: derive nginx server_name from URL ─
+          DOMAIN=$(echo "$FRONTEND_URL" | sed -e 's|^https\?://||' -e 's|/.*||' -e 's|:.*||')
           sed -i "s|FRONTEND_URL_PLACEHOLDER|${FRONTEND_URL}|g" /tmp/deploy_script.sh
           sed -i "s|FRONTEND_BUILD_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/frontend/dist|g" /tmp/deploy_script.sh
           sed -i "s|DATABASE_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/data/irmeeting.db|g" /tmp/deploy_script.sh

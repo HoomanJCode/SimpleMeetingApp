@@ -11,7 +11,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRATION: z.string().default('15m'),
   REFRESH_TOKEN_EXPIRATION: z.string().default('30d'),
-  FRONTEND_URL: z.string().url(),
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   FRONTEND_BUILD_PATH: z.string().default('./frontend/dist'),
   DATABASE_PATH: z.string().default('./data/irmeeting.db'),
 }).refine(
