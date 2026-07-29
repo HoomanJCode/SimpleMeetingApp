@@ -99,7 +99,9 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'auto-generate' }}
           JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
           REFRESH_TOKEN_EXPIRATION: ${{ vars.REFRESH_TOKEN_EXPIRATION || '30d' }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://localhost' }}
+          PORT: ${{ secrets.PORT || '3001' }}
+          DOMAIN: ${{ secrets.DOMAIN || 'localhost' }}
+          CLOUDFLARED: ${{ secrets.CLOUDFLARED || 'false' }}
           SSL_CERT_B64: ${{ secrets.SSL_CERT_B64 || '' }}
           SSL_KEY_B64: ${{ secrets.SSL_KEY_B64 || '' }}
         run: |
@@ -143,7 +145,7 @@ jobs:
           mkdir -p "$PROJECT_DIR/backend"
           cat > "$PROJECT_DIR/backend/.env" << EOF
           NODE_ENV=production
-          PORT=3001
+          PORT=PORT_PLACEHOLDER
           HOST=127.0.0.1
           AUTH_METHOD=AUTH_METHOD_PLACEHOLDER
           GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID_PLACEHOLDER
@@ -226,10 +228,10 @@ jobs:
           mkdir -p /var/log/"$SERVICE_NAME"
           systemctl daemon-reload && systemctl enable "$SERVICE_NAME"
 
-          # ── Setup SSL (if provided) ──────────────────────────────────
+          # ── Setup SSL (if required) ───────────────────────────────────
           SSL_CERT_PATH=""
           SSL_KEY_PATH=""
-          if [ -n "SSL_CERT_B64_PLACEHOLDER" ] && [ -n "SSL_KEY_B64_PLACEHOLDER" ]; then
+          if [ "USE_SSL_PLACEHOLDER" = "true" ]; then
             echo "🔐 Installing SSL certificates..."
             mkdir -p "$PROJECT_DIR/ssl"
             echo 'SSL_CERT_B64_PLACEHOLDER' | base64 -d > "$PROJECT_DIR/ssl/fullchain.pem" || exit 1
@@ -278,7 +280,7 @@ jobs:
 
               # API proxy to backend
               location /api {
-                  proxy_pass http://127.0.0.1:3001;
+                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
                   proxy_set_header Host \$host;
                   proxy_set_header X-Real-IP \$remote_addr;
@@ -288,7 +290,7 @@ jobs:
 
               # WebSocket proxy to backend (Socket.IO)
               location /socket.io {
-                  proxy_pass http://127.0.0.1:3001;
+                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade \$http_upgrade;
                   proxy_set_header Connection "upgrade";
@@ -329,7 +331,7 @@ jobs:
 
               # API proxy to backend
               location /api {
-                  proxy_pass http://127.0.0.1:3001;
+                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
                   proxy_set_header Host \$host;
                   proxy_set_header X-Real-IP \$remote_addr;
@@ -339,7 +341,7 @@ jobs:
 
               # WebSocket proxy to backend (Socket.IO)
               location /socket.io {
-                  proxy_pass http://127.0.0.1:3001;
+                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade \$http_upgrade;
                   proxy_set_header Connection "upgrade";
@@ -386,7 +388,7 @@ jobs:
           echo "🏥 Running health check (retry up to 30s)..."
           HEALTH_OK=0
           for i in 1 2 3 4 5 6; do
-            if curl -sf --max-time 5 http://127.0.0.1:3001/api/health > /dev/null 2>&1; then
+            if curl -sf --max-time 5 http://127.0.0.1:PORT_PLACEHOLDER/api/health > /dev/null 2>&1; then
               echo "✅ Health check passed!"
               HEALTH_OK=1
               break
@@ -397,6 +399,34 @@ jobs:
           if [ "$HEALTH_OK" -eq 0 ]; then
             echo "⚠️  Health check failed after 6 attempts — backend may still be starting"
             tail -20 /var/log/"$SERVICE_NAME"/backend_error.log 2>/dev/null || true
+          fi
+
+          # ── Cloudflare Tunnel: add ingress rule for DOMAIN ─────────
+          if [ "CLOUDFLARED_PLACEHOLDER" = "true" ]; then
+            if command -v cloudflared &> /dev/null; then
+              echo "🌐 Configuring cloudflared tunnel for DOMAIN_PLACEHOLDER..."
+              CFG="${HOME}/.cloudflared/config.yml"
+              if [ -f "$CFG" ]; then
+                if grep -q "DOMAIN_PLACEHOLDER" "$CFG" 2>/dev/null; then
+                  echo "  → Domain already configured in tunnel"
+                else
+                  echo "  → Adding ingress: DOMAIN_PLACEHOLDER → http://127.0.0.1:PORT_PLACEHOLDER"
+                  # Use sed s/// with \n for newlines (GNU sed interprets \n as newline)
+                  sed -i "s|service: http_status:404|  - hostname: DOMAIN_PLACEHOLDER\n    service: http://127.0.0.1:PORT_PLACEHOLDER\n  - service: http_status:404|" "$CFG" || true
+                  systemctl restart cloudflared-tunnel 2>/dev/null || \
+                    systemctl restart cloudflared 2>/dev/null || \
+                    echo "  ⚠ Could not restart cloudflared — restart manually"
+                  echo "  → Tunnel service restarted"
+                fi
+              else
+                echo "  ⚠ cloudflared config not found at $CFG"
+                echo "    Add this to your tunnel config:"
+                echo "    - hostname: DOMAIN_PLACEHOLDER"
+                echo "      service: http://127.0.0.1:PORT_PLACEHOLDER"
+              fi
+            else
+              echo "  ⚠ cloudflared not installed — skip tunnel config"
+            fi
           fi
 
           echo "✅ Deployment Complete!"
@@ -417,15 +447,38 @@ jobs:
           sed -i "s|JWT_EXPIRATION_PLACEHOLDER|${JWT_EXPIRATION}|g" /tmp/deploy_script.sh
           sed -i "s|REFRESH_TOKEN_EXPIRATION_PLACEHOLDER|${REFRESH_TOKEN_EXPIRATION}|g" /tmp/deploy_script.sh
 
-          # ── FRONTEND_URL + DOMAIN: derive nginx server_name from URL ─
-          DOMAIN=$(echo "$FRONTEND_URL" | sed -e 's|^https\?://||' -e 's|/.*||' -e 's|:.*||')
-          sed -i "s|FRONTEND_URL_PLACEHOLDER|${FRONTEND_URL}|g" /tmp/deploy_script.sh
+          # ── PORT: substitute into deploy script ─────────────────────
+          sed -i "s|PORT_PLACEHOLDER|${PORT}|g" /tmp/deploy_script.sh
+
+          # ── Parse DOMAIN (may include http:// or https://) ────────
+          if echo "$DOMAIN" | grep -q '^https\?://'; then
+            DOMAIN_PROTOCOL=$(echo "$DOMAIN" | grep -o '^https\?://')
+            DOMAIN_BARE=$(echo "$DOMAIN" | sed -e 's|^https\?://||')
+          else
+            DOMAIN_PROTOCOL="https://"
+            DOMAIN_BARE="$DOMAIN"
+          fi
+          DOMAIN_FULL="${DOMAIN_PROTOCOL}${DOMAIN_BARE}"
+
+          # Determine if SSL certs are needed
+          if [ "$CLOUDFLARED" = "true" ] || [ "$DOMAIN_PROTOCOL" = "http://" ]; then
+            USE_SSL=false
+          elif [ -n "$SSL_CERT_B64" ] && [ -n "$SSL_KEY_B64" ]; then
+            USE_SSL=true
+          else
+            USE_SSL=false
+          fi
+
+          sed -i "s|FRONTEND_URL_PLACEHOLDER|${DOMAIN_FULL}|g" /tmp/deploy_script.sh
           sed -i "s|FRONTEND_BUILD_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/frontend/dist|g" /tmp/deploy_script.sh
           sed -i "s|DATABASE_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/data/irmeeting.db|g" /tmp/deploy_script.sh
           sed -i "s|AUTH_METHOD_PLACEHOLDER|google|g" /tmp/deploy_script.sh
           sed -i "s|SSL_CERT_B64_PLACEHOLDER|${SSL_CERT_B64}|g" /tmp/deploy_script.sh
           sed -i "s|SSL_KEY_B64_PLACEHOLDER|${SSL_KEY_B64}|g" /tmp/deploy_script.sh
-          sed -i "s|NGINX_SERVER_NAME|${DOMAIN}|g" /tmp/deploy_script.sh
+          sed -i "s|DOMAIN_PLACEHOLDER|${DOMAIN_BARE}|g" /tmp/deploy_script.sh
+          sed -i "s|NGINX_SERVER_NAME|${DOMAIN_BARE}|g" /tmp/deploy_script.sh
+          sed -i "s|CLOUDFLARED_PLACEHOLDER|${CLOUDFLARED}|g" /tmp/deploy_script.sh
+          sed -i "s|USE_SSL_PLACEHOLDER|${USE_SSL}|g" /tmp/deploy_script.sh
 
           # ── Upload and execute ───────────────────────────────────────
           scp /tmp/deploy_script.sh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
