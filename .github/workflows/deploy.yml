@@ -130,8 +130,6 @@ jobs:
           PORT: ${{ secrets.PORT || '3001' }}
           DOMAIN: ${{ secrets.DOMAIN || 'localhost' }}
           CLOUDFLARED: ${{ secrets.CLOUDFLARED || 'false' }}
-          SSL_CERT_B64: ${{ secrets.SSL_CERT_B64 || '' }}
-          SSL_KEY_B64: ${{ secrets.SSL_KEY_B64 || '' }}
         run: |
           # Create deploy script with error handling
           cat > /tmp/deploy_script.sh << 'SCRIPTEOF'
@@ -256,88 +254,9 @@ jobs:
           mkdir -p /var/log/"$SERVICE_NAME"
           systemctl daemon-reload && systemctl enable "$SERVICE_NAME"
 
-          # ── Setup SSL (if required) ───────────────────────────────────
-          SSL_CERT_PATH=""
-          SSL_KEY_PATH=""
-          if [ "USE_SSL_PLACEHOLDER" = "true" ]; then
-            echo "🔐 Installing SSL certificates..."
-            mkdir -p "$PROJECT_DIR/ssl"
-            echo 'SSL_CERT_B64_PLACEHOLDER' | base64 -d > "$PROJECT_DIR/ssl/fullchain.pem" || exit 1
-            echo 'SSL_KEY_B64_PLACEHOLDER' | base64 -d > "$PROJECT_DIR/ssl/privkey.pem" || exit 1
-            chmod 600 "$PROJECT_DIR/ssl/privkey.pem"
-            SSL_CERT_PATH="$PROJECT_DIR/ssl/fullchain.pem"
-            SSL_KEY_PATH="$PROJECT_DIR/ssl/privkey.pem"
-          fi
-
-          # ── Create Nginx config ──────────────────────────────────────
+          # ── Create Nginx config (HTTP-only — Cloudflare handles SSL) ─
           echo "🔧 Creating Nginx config..."
-          if [ -n "$SSL_CERT_PATH" ] && [ -n "$SSL_KEY_PATH" ]; then
-            cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
-          # HTTP — redirect to HTTPS
-          server {
-              listen 80;
-              server_name NGINX_SERVER_NAME;
-              return 301 https://\$host\$request_uri;
-          }
-
-          # HTTPS
-          server {
-              listen 443 ssl http2;
-              server_name NGINX_SERVER_NAME;
-
-              ssl_certificate SSL_CERT_PATH_PLACEHOLDER;
-              ssl_certificate_key SSL_KEY_PATH_PLACEHOLDER;
-              ssl_protocols TLSv1.2 TLSv1.3;
-              ssl_ciphers HIGH:!aNULL:!MD5;
-
-              # Frontend static files
-              root $PROJECT_DIR/frontend/dist;
-              index index.html;
-
-              # Gzip
-              gzip on;
-              gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-              gzip_min_length 256;
-              gzip_vary on;
-
-              # Security headers
-              add_header X-Frame-Options "SAMEORIGIN" always;
-              add_header X-Content-Type-Options "nosniff" always;
-              add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-              add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-              # API proxy to backend
-              location /api {
-                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
-                  proxy_http_version 1.1;
-                  proxy_set_header Host \$host;
-                  proxy_set_header X-Real-IP \$remote_addr;
-                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto \$scheme;
-              }
-
-              # WebSocket proxy to backend (Socket.IO)
-              location /socket.io {
-                  proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade \$http_upgrade;
-                  proxy_set_header Connection "upgrade";
-                  proxy_set_header Host \$host;
-                  proxy_set_header X-Real-IP \$remote_addr;
-                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-              }
-
-              # SPA catch-all: serve index.html for client-side routing
-              location / {
-                  try_files \$uri \$uri/ /index.html;
-              }
-          }
-          NGINXEOF
-            # Substitute SSL paths in nginx config
-            sed -i "s|SSL_CERT_PATH_PLACEHOLDER|$SSL_CERT_PATH|g" /etc/nginx/sites-available/"$SERVICE_NAME"
-            sed -i "s|SSL_KEY_PATH_PLACEHOLDER|$SSL_KEY_PATH|g" /etc/nginx/sites-available/"$SERVICE_NAME"
-          else
-            cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
+          cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
           server {
               listen 80;
               server_name NGINX_SERVER_NAME;
@@ -384,7 +303,6 @@ jobs:
               }
           }
           NGINXEOF
-          fi
 
           # Enable site
           ln -sf /etc/nginx/sites-available/"$SERVICE_NAME" /etc/nginx/sites-enabled/
@@ -478,35 +396,17 @@ jobs:
           # ── PORT: substitute into deploy script ─────────────────────
           sed -i "s|PORT_PLACEHOLDER|${PORT}|g" /tmp/deploy_script.sh
 
-          # ── Parse DOMAIN (may include http:// or https://) ────────
-          if echo "$DOMAIN" | grep -q '^https\?://'; then
-            DOMAIN_PROTOCOL=$(echo "$DOMAIN" | grep -o '^https\?://')
-            DOMAIN_BARE=$(echo "$DOMAIN" | sed -e 's|^https\?://||')
-          else
-            DOMAIN_PROTOCOL="https://"
-            DOMAIN_BARE="$DOMAIN"
-          fi
-          DOMAIN_FULL="${DOMAIN_PROTOCOL}${DOMAIN_BARE}"
-
-          # Determine if SSL certs are needed
-          if [ "$CLOUDFLARED" = "true" ] || [ "$DOMAIN_PROTOCOL" = "http://" ]; then
-            USE_SSL=false
-          elif [ -n "$SSL_CERT_B64" ] && [ -n "$SSL_KEY_B64" ]; then
-            USE_SSL=true
-          else
-            USE_SSL=false
-          fi
+          # ── Parse DOMAIN (always https:// — Cloudflare handles SSL) ─
+          DOMAIN_BARE=$(echo "$DOMAIN" | sed -e 's|^https\?://||')
+          DOMAIN_FULL="https://${DOMAIN_BARE}"
 
           sed -i "s|FRONTEND_URL_PLACEHOLDER|${DOMAIN_FULL}|g" /tmp/deploy_script.sh
           sed -i "s|FRONTEND_BUILD_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/frontend/dist|g" /tmp/deploy_script.sh
           sed -i "s|DATABASE_PATH_PLACEHOLDER|${{ env.PROJECT_DIR }}/data/irmeeting.db|g" /tmp/deploy_script.sh
           sed -i "s|AUTH_METHOD_PLACEHOLDER|google|g" /tmp/deploy_script.sh
-          sed -i "s|SSL_CERT_B64_PLACEHOLDER|${SSL_CERT_B64}|g" /tmp/deploy_script.sh
-          sed -i "s|SSL_KEY_B64_PLACEHOLDER|${SSL_KEY_B64}|g" /tmp/deploy_script.sh
           sed -i "s|DOMAIN_PLACEHOLDER|${DOMAIN_BARE}|g" /tmp/deploy_script.sh
           sed -i "s|NGINX_SERVER_NAME|${DOMAIN_BARE}|g" /tmp/deploy_script.sh
           sed -i "s|CLOUDFLARED_PLACEHOLDER|${CLOUDFLARED}|g" /tmp/deploy_script.sh
-          sed -i "s|USE_SSL_PLACEHOLDER|${USE_SSL}|g" /tmp/deploy_script.sh
 
           # ── Upload and execute ───────────────────────────────────────
           scp /tmp/deploy_script.sh ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
