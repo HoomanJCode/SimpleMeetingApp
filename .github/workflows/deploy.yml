@@ -66,17 +66,17 @@ jobs:
 
       - name: 📦 Install system packages
         run: |
-          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             'apt-get update -qq && apt-get install -y -qq nginx curl git build-essential python3'
 
       - name: 🔧 Install Node.js 20 (if missing)
         run: |
-          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             'command -v node >/dev/null || (curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs)'
 
       - name: ✅ Verify tooling
         run: |
-          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             'node -v && npm -v && nginx -v && git --version'
 
   # ── Job 3: Deploy (waits for both test and setup) ────────────────────
@@ -481,12 +481,12 @@ jobs:
           sed -i "s|USE_SSL_PLACEHOLDER|${USE_SSL}|g" /tmp/deploy_script.sh
 
           # ── Upload and execute ───────────────────────────────────────
-          scp /tmp/deploy_script.sh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
+          scp /tmp/deploy_script.sh ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
 
           echo "📡 Executing deployment (timeout: 10 min)..."
           timeout 600 ssh \
             -o ConnectTimeout=10 \
             -o ServerAliveInterval=30 \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             "bash /tmp/deploy_script.sh" || exit 1
