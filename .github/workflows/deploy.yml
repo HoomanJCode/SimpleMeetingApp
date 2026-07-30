@@ -68,17 +68,16 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             'export DEBIAN_FRONTEND=noninteractive
-             # Clean up any broken pre-existing nginx configs before
-             # any apt operation (e.g. Jitsi leftovers referencing
-             # missing certs that would block nginx from starting).
-             if [ -d /etc/nginx/sites-enabled ]; then
-               grep -rl "ssl_certificate\|ssl_certificate_key" /etc/nginx/sites-enabled/ 2>/dev/null | while read f; do
-                 echo "Removing broken SSL config: $f"
-                 rm -f "$f"
-               done
-             fi
-             # Fix any packages stuck in half-configured state (nginx
-             # from a previous failed install, etc.).
+             # Remove any broken pre-existing nginx configs (e.g. Jitsi
+             # leftovers referencing missing certs) before any apt
+             # operation — use find -delete which is more reliable
+             # than a grep|while-read pipeline over SSH.
+             for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+               [ -d "$d" ] && find "$d" -maxdepth 1 \\( -type f -o -type l \\) \
+                 -exec grep -l "ssl_certificate\|ssl_certificate_key" {} \; \
+                 -delete 2>/dev/null || true
+             done
+             # Fix any packages stuck in half-configured state.
              dpkg --configure -a 2>/dev/null || true
              missing=""
              for pkg in nginx curl git build-essential python3; do
@@ -94,7 +93,17 @@ jobs:
       - name: 🔧 Install Node.js 20 (if missing)
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
-            'node_ver=$(node -v 2>/dev/null || true)
+            'export DEBIAN_FRONTEND=noninteractive
+             # Same nginx cleanup as the system packages step — the
+             # Node.js step runs its own apt-get install which will
+             # try to configure any half-installed nginx.
+             for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+               [ -d "$d" ] && find "$d" -maxdepth 1 \\( -type f -o -type l \\) \
+                 -exec grep -l "ssl_certificate\|ssl_certificate_key" {} \; \
+                 -delete 2>/dev/null || true
+             done
+             dpkg --configure -a 2>/dev/null || true
+             node_ver=$(node -v 2>/dev/null || true)
              if echo "$node_ver" | grep -q "^v20\."; then
                echo "Node.js 20 already installed: $node_ver"
              else
