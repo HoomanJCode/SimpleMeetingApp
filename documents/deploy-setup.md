@@ -28,6 +28,7 @@ These **must** be set in **Repository → Settings → Secrets and variables →
 |---|---|---|
 | `VPS_SSH_PRIVATE_KEY` | SSH private key to connect to the VPS | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `VPS_HOST` | VPS IP or hostname | `123.45.67.89` |
+| `GH_PRIVATE_REPO_TOKEN` | GitHub PAT with `repo` scope for cloning the private repo | `ghp_xxxxxxxxxxxxxxxxxxxx` |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456789-xxx.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | `GOCSPX-...` |
 | `GOOGLE_REDIRECT_URI` | Google OAuth redirect URL | `https://yourdomain.com/api/auth/google/callback` |
@@ -110,29 +111,22 @@ if you need to remove them).
 
 ### Nginx Cleanup (setup-vps)
 
-Both the **system packages** and **Node.js install** steps in `setup-vps` run
-a cleanup before any `apt-get` operation:
+The **system packages** step in `setup-vps` runs a cleanup before any
+`apt-get` operation:
 
 ```bash
 for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
-  [ -d "$d" ] && find "$d" -maxdepth 1 \( -type f -o -type l \) \
-    -exec grep -l "ssl_certificate\|ssl_certificate_key" {} \; \
-    -delete 2>/dev/null || true
+  [ -d "$d" ] && grep -rl "ssl_certificate\|ssl_certificate_key" "$d" 2>/dev/null | xargs rm -f 2>/dev/null || true
 done
 ```
 
-This finds and deletes any nginx config (file or symlink) in `sites-enabled/`
-or `conf.d/` that references `ssl_certificate` or `ssl_certificate_key` — this
-handles leftover Jitsi Meet configs or other broken SSL configs that would
-prevent nginx from starting.
+This finds and deletes any nginx config in `sites-enabled/` or `conf.d/` that
+references `ssl_certificate` or `ssl_certificate_key` — handling leftover Jitsi
+Meet configs or other broken SSL configs that would prevent nginx from starting.
+After cleanup, `dpkg --configure -a` runs to fix half-configured packages.
 
-After cleanup, `dpkg --configure -a` runs to fix any packages stuck in
-half-configured state.
-
-**Why in both steps?** The Node.js install step runs its own `apt-get install
-nodejs`, which triggers `dpkg --configure nginx` as a side effect. If nginx
-was half-configured from a previous failed deploy, the Node.js step would
-fail without its own cleanup guard.
+The cleanup uses `grep | xargs rm` (not `find -delete`) to avoid SSH escaping
+issues with escaped parentheses inside the remote command.
 
 ---
 
@@ -194,6 +188,14 @@ rm -f /etc/nginx/conf.d/*.conf   # if any SSL configs there
 dpkg --configure -a
 systemctl start nginx
 ```
+
+### `fatal: could not read Username` when cloning
+
+The repository is private — the VPS needs a GitHub token to clone.  Create
+one at https://github.com/settings/tokens (classic token, **repo** scope,
+no expiration).  Add it as the `GH_PRIVATE_REPO_TOKEN` secret in your
+repo's Actions secrets.  The deploy script injects it into the clone URL:
+`https://<token>@github.com/HoomanJCode/IrMeetingApp.git`.
 
 ### `debconf: unable to initialize frontend` errors
 

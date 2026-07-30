@@ -325,14 +325,14 @@ jobs:
           # Then tsc compiles TypeScript → dist/.
           echo "📦 Building backend..."
           cd "$PROJECT_DIR/backend"
-          run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
+          run_with_timeout 600 npm ci --no-audit --no-fund || exit 1
           run_with_timeout 300 npm run build || exit 1
 
           # ── Build frontend ──────────────────────────────────────────
           # Vite builds the React SPA into dist/ (served by nginx).
           echo "🎨 Building frontend..."
           cd "$PROJECT_DIR/frontend"
-          run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
+          run_with_timeout 600 npm ci --no-audit --no-fund || exit 1
           run_with_timeout 300 npm run build || exit 1
 
           # ── Data directory ──────────────────────────────────────────
