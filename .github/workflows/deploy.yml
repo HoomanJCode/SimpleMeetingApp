@@ -1,25 +1,64 @@
-# .github/workflows/deploy.yml
+# =============================================================================
+# IrMeetingApp — Deploy to VPS
+# =============================================================================
+#
+# This workflow deploys the full-stack application (backend API + frontend SPA)
+# to a Debian VPS behind an nginx reverse proxy.  SSL/HTTPS is handled by
+# Cloudflare Tunnel — the VPS itself never touches certificates.
+#
+# Architecture:
+#   User → https://domain.com → Cloudflare (SSL) → cloudflared tunnel
+#        → VPS nginx :80 → frontend static files OR /api → Node.js backend :3001
+#
+# PREREQUISITES on the VPS (these are NOT provisioned by this workflow):
+#   1. cloudflared installed and authenticated (`cloudflared tunnel login`)
+#   2. A Cloudflare Tunnel created (`cloudflared tunnel create`)
+#   3. DNS A/AAAA records proxied (orange-clouded) to the tunnel
+#
+# SECRETS needed in GitHub (Settings → Secrets and variables → Actions):
+#   Required:
+#     VPS_SSH_PRIVATE_KEY  — SSH private key for root (or VPS_USER)
+#     VPS_HOST             — VPS IP or hostname
+#     GOOGLE_CLIENT_ID     — Google OAuth client ID
+#     GOOGLE_CLIENT_SECRET — Google OAuth client secret
+#     GOOGLE_REDIRECT_URI  — e.g. https://domain.com/api/auth/google/callback
+#   Optional (defaults shown):
+#     VPS_USER   → root         SSH username
+#     JWT_SECRET → auto-generate JWT signing key (persisted across deploys)
+#     PORT       → 3001         Backend listen port
+#     DOMAIN     → localhost    Public domain (strips protocol, forces https://)
+#     CLOUDFLARED→ false        Set "true" to auto-configure tunnel ingress
+#
+# For full documentation see: documents/deploy-setup.md
+# =============================================================================
+
 name: Deploy IrMeetingApp to VPS
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 env:
-  PROJECT_DIR: /opt/irmeeting
-  SERVICE_NAME: irmeeting
+  PROJECT_DIR: /opt/irmeeting    # everything lives here on the VPS
+  SERVICE_NAME: irmeeting        # systemd unit name & nginx site name
   NODE_VERSION: '20'
 
 jobs:
-  # ── Job 1: Test phase (fast feedback) ──────────────────────────────────
+
+  # ===========================================================================
+  # Job 1 — Test (fast-fail gate)
+  # ===========================================================================
+  # Runs backend + frontend lint & unit tests.  If anything fails, the deploy
+  # jobs are skipped.  This catches broken commits before they reach the VPS.
+  # ===========================================================================
   test:
     runs-on: ubuntu-latest
     name: 🧪 Test & Build
     steps:
       - uses: actions/checkout@v4
 
+      # ── Backend tests ────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -30,8 +69,8 @@ jobs:
         working-directory: backend
         run: |
           npm ci
-          npm run lint
-          npm test
+          npm run lint       # tsc type-check (configured as "lint" script)
+          npm test           # vitest unit tests
         env:
           NODE_ENV: test
           GOOGLE_CLIENT_ID: ci-google-client-id
@@ -40,6 +79,7 @@ jobs:
           JWT_SECRET: ci-jwt-secret-at-least-32-characters-long-for-testing
           FRONTEND_URL: http://localhost:5173
 
+      # ── Frontend tests ───────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -50,32 +90,55 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npm run lint
-          npm test
+          npm run lint       # tsc type-check (configured as "lint" script)
+          npm test           # vitest unit tests
 
-  # ── Job 2: VPS setup (runs after tests) ───────────────────────────────
+  # ===========================================================================
+  # Job 2 — VPS Environment Setup
+  # ===========================================================================
+  # Ensures the VPS has all required system packages and Node.js 20.
+  # Everything is idempotent — packages are only installed if missing.
+  # ===========================================================================
   setup-vps:
     runs-on: ubuntu-latest
     name: 🔧 Setup VPS Environment
     needs: test
     steps:
+      # Load the SSH private key into the agent so subsequent ssh/scp
+      # commands authenticate without password prompts.
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      # Pre-accept the host key to avoid interactive prompts.
       - run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
+      # ── System packages ──────────────────────────────────────────────
+      # Installs nginx, curl, git, build-essential, and python3 if they
+      # are not already present (dpkg -s check).  Before any apt operation:
+      #
+      #   1. Scans /etc/nginx/sites-enabled/ and /etc/nginx/conf.d/ for
+      #      leftover SSL configs (e.g. from a previous Jitsi install that
+      #      references non-existent certs) and deletes them.  This
+      #      prevents nginx from failing its post-install config test.
+      #
+      #   2. Runs dpkg --configure -a to finish any half-installed
+      #      packages left over from a previous failed apt run.
+      #
+      # DEBIAN_FRONTEND=noninteractive suppresses debconf dialog prompts
+      # that break when there is no TTY (SSH sessions).
+      # ================================================================
       - name: 📦 Install system packages (only if missing)
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
-            'export DEBIAN_FRONTEND=noninteractive
-             # Remove broken pre-existing nginx configs (e.g. Jitsi
-             # leftovers referencing missing certs) before any apt
-             # operation.
+            'set -e; export DEBIAN_FRONTEND=noninteractive
+             # ── Nuke any leftover SSL configs (Jitsi, old certs, etc.) ─
              for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
                [ -d "$d" ] && grep -rl "ssl_certificate\|ssl_certificate_key" "$d" 2>/dev/null | xargs rm -f 2>/dev/null || true
              done
-             # Fix any packages stuck in half-configured state.
+             # ── Finish any half-configured packages ───────────────────
              dpkg --configure -a 2>/dev/null || true
+             # ── Install missing packages ──────────────────────────────
              missing=""
              for pkg in nginx curl git build-essential python3; do
                dpkg -s "$pkg" >/dev/null 2>&1 || missing="$missing $pkg"
@@ -87,30 +150,49 @@ jobs:
                echo "All system packages already installed"
              fi'
 
+      # ── Node.js 20 ──────────────────────────────────────────────────
+      # Checks the installed Node version.  If it is not v20.x, downloads
+      # and runs the NodeSource setup script followed by apt-get install.
+      # The setup script adds NodeSource's apt repo; after that, apt-get
+      # installs the actual nodejs package.
+      #
+      # Uses DEBIAN_FRONTEND=noninteractive for the same TTY-less reason
+      # as above.  `set -e` makes the remote script fail fast on errors.
+      # ================================================================
       - name: 🔧 Install Node.js 20 (if missing)
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
-            'export DEBIAN_FRONTEND=noninteractive
-             # Same nginx cleanup — Node.js step runs its own apt-get
-             # which will try to configure any half-installed nginx.
-             for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
-               [ -d "$d" ] && grep -rl "ssl_certificate\|ssl_certificate_key" "$d" 2>/dev/null | xargs rm -f 2>/dev/null || true
-             done
-             dpkg --configure -a 2>/dev/null || true
+            'set -e; export DEBIAN_FRONTEND=noninteractive
              node_ver=$(node -v 2>/dev/null || true)
              if echo "$node_ver" | grep -q "^v20\."; then
                echo "Node.js 20 already installed: $node_ver"
              else
                echo "Installing Node.js 20..."
-               curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs
+               curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y -qq nodejs
              fi'
 
+      # ── Verification ─────────────────────────────────────────────────
+      # Prints installed versions of all key tooling to the workflow log
+      # for diagnostics.  If something is missing, this step fails loudly.
+      # =================================================================
       - name: ✅ Verify tooling
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
             'node -v && npm -v && nginx -v && git --version'
 
-  # ── Job 3: Deploy (waits for both test and setup) ────────────────────
+  # ===========================================================================
+  # Job 3 — Deploy Application
+  # ===========================================================================
+  # Clones/pulls the repository, builds both backend and frontend, writes
+  # the .env file, creates/updates the nginx config, starts the systemd
+  # service, runs a health check, and optionally configures the Cloudflare
+  # Tunnel ingress rule.
+  #
+  # The heavy lifting is done by a bash script that is constructed on the
+  # GitHub runner, substituted with secret values via sed, then SCP'd to
+  # the VPS and executed remotely.  All long-running steps have 5-minute
+  # timeouts to prevent hung workflows.
+  # ===========================================================================
   deploy:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to VPS
@@ -122,6 +204,10 @@ jobs:
           ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
       - run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
+      # ── Build deploy script, upload, and execute ────────────────────
+      # All secrets are mapped to env vars (masked in logs), then sed'd
+      # into a template script as placeholder substitutions.
+      # ================================================================
       - name: 🚀 Deploy application
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -133,19 +219,27 @@ jobs:
           PORT: ${{ secrets.PORT || '3001' }}
           DOMAIN: ${{ secrets.DOMAIN || 'localhost' }}
           CLOUDFLARED: ${{ secrets.CLOUDFLARED || 'false' }}
+          GH_TOKEN: ${{ secrets.GH_PRIVATE_REPO_TOKEN }}
         run: |
-          # Create deploy script with error handling
+          # ===================================================================
+          # Build the deploy script as a heredoc with PLACEHOLDER strings.
+          # After creation we sed-substitute actual values from the env.
+          # This avoids quoting nightmares with nested bash-in-yaml-in-ssh.
+          # ===================================================================
           cat > /tmp/deploy_script.sh << 'SCRIPTEOF'
           #!/bin/bash
           set -e
 
           PROJECT_DIR="PROJECT_DIR_PLACEHOLDER"
           SERVICE_NAME="SERVICE_NAME_PLACEHOLDER"
+          GH_TOKEN="GITHUB_TOKEN_PLACEHOLDER"
 
           echo "========================================"
           echo "  IrMeetingApp Deployment"
           echo "========================================"
 
+          # Helper: run a command with a timeout.  If it times out (exit
+          # code 124), print a clear message.  Other failures propagate.
           run_with_timeout() {
             local timeout=$1; shift
             timeout "$timeout" "$@" || {
@@ -154,22 +248,30 @@ jobs:
             }
           }
 
-          # ── Stop backend service if running ──────────────────────────
+          # ── Stop the running backend before updating files ──────────
+          # Prevents file-in-use issues during npm ci / build.
           systemctl is-active --quiet "$SERVICE_NAME" && systemctl stop "$SERVICE_NAME" || true
 
-          # ── Update or clone repository ───────────────────────────────
+          # ── Clone or pull the repository ────────────────────────────
+          # First deploy: shallow clone of master.  Subsequent deploys:
+          # fetch + hard reset to avoid merge conflicts (this is a
+          # deployment target, not a dev workspace).
           if [ -d "$PROJECT_DIR/.git" ]; then
             echo "📥 Pulling latest code..."
             cd "$PROJECT_DIR"
+            # Ensure the remote uses the token (fixes repos cloned before this).
+            git remote set-url origin https://${GH_TOKEN}@github.com/HoomanJCode/IrMeetingApp.git 2>/dev/null || true
             run_with_timeout 300 git fetch origin || exit 1
             run_with_timeout 300 git reset --hard origin/master || exit 1
           else
             echo "📥 Cloning repository..."
-            run_with_timeout 300 git clone --branch master https://github.com/HoomanJCode/IrMeetingApp.git "$PROJECT_DIR" || exit 1
+            run_with_timeout 300 git clone --branch master https://${GH_TOKEN}@github.com/HoomanJCode/IrMeetingApp.git "$PROJECT_DIR" || exit 1
             cd "$PROJECT_DIR"
           fi
 
-          # ── Create backend .env ──────────────────────────────────────
+          # ── Create backend .env file ────────────────────────────────
+          # All values are placeholders that get sed-substituted before
+          # the script is uploaded (see bottom of workflow step).
           echo "⚙️  Creating backend .env..."
           mkdir -p "$PROJECT_DIR/backend"
           cat > "$PROJECT_DIR/backend/.env" << EOF
@@ -189,10 +291,12 @@ jobs:
           EOF
           chmod 600 "$PROJECT_DIR/backend/.env"
 
-          # ── Auto-generate JWT_SECRET if not provided ────────────
-          # Try to preserve an existing secret from a prior deploy so that
-          # refresh tokens stay valid across restarts. Fall back to a new
-          # random secret when deploying for the first time.
+          # ── JWT_SECRET: auto-generate if not provided ───────────────
+          # Checks whether the placeholder was left empty (i.e. the
+          # GitHub secret was "auto-generate").  If so, reuse the
+          # secret from the previous deploy's .env.prev so refresh
+          # tokens don't get invalidated.  Falls back to generating a
+          # new 64-char hex secret via openssl or Node.js.
           if [ -z "$(grep '^JWT_SECRET=' "$PROJECT_DIR/backend/.env" | cut -d= -f2)" ]; then
             EXISTING_SECRET=""
             if [ -f "$PROJECT_DIR/backend/.env.prev" ]; then
@@ -216,23 +320,31 @@ jobs:
           cp "$PROJECT_DIR/backend/.env" "$PROJECT_DIR/backend/.env.prev"
           chmod 600 "$PROJECT_DIR/backend/.env.prev"
 
-          # ── Install dependencies + build backend ────────────────────
+          # ── Build backend ───────────────────────────────────────────
+          # npm ci for reproducible installs (uses package-lock.json).
+          # Then tsc compiles TypeScript → dist/.
           echo "📦 Building backend..."
           cd "$PROJECT_DIR/backend"
           run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
           run_with_timeout 300 npm run build || exit 1
 
-          # ── Install dependencies + build frontend ────────────────────
+          # ── Build frontend ──────────────────────────────────────────
+          # Vite builds the React SPA into dist/ (served by nginx).
           echo "🎨 Building frontend..."
           cd "$PROJECT_DIR/frontend"
           run_with_timeout 300 npm ci --no-audit --no-fund || exit 1
           run_with_timeout 300 npm run build || exit 1
 
-          # Ensure data directory exists and is writable
+          # ── Data directory ──────────────────────────────────────────
+          # SQLite database lives here.  Ensure it exists and is owned
+          # by root (the systemd service runs as root).
           mkdir -p "$PROJECT_DIR/data"
           chown -R root:root "$PROJECT_DIR/data"
 
-          # ── Create systemd service for backend ───────────────────────
+          # ── systemd service for the backend ─────────────────────────
+          # Creates (or overwrites) the systemd unit file.  The service
+          # runs Node.js directly (no PM2 needed — systemd handles
+          # restarts and logging).
           echo "🔧 Creating systemd service..."
           cat > /etc/systemd/system/"$SERVICE_NAME".service << SERVICEEOF
           [Unit]
@@ -257,29 +369,36 @@ jobs:
           mkdir -p /var/log/"$SERVICE_NAME"
           systemctl daemon-reload && systemctl enable "$SERVICE_NAME"
 
-          # ── Create Nginx config (HTTP-only — Cloudflare handles SSL) ─
+          # ── Nginx config (HTTP-only — Cloudflare provides SSL) ─────
+          # Listens on port 80.  Proxies /api and /socket.io to the
+          # Node backend.  Everything else is served as static files
+          # from the frontend build (SPA catch-all via try_files).
+          #
+          # No SSL certs, no HTTPS listener — Cloudflare Tunnel
+          # terminates TLS at Cloudflare's edge and forwards to :80.
+          # ============================================================
           echo "🔧 Creating Nginx config..."
           cat > /etc/nginx/sites-available/"$SERVICE_NAME" << NGINXEOF
           server {
               listen 80;
               server_name NGINX_SERVER_NAME;
 
-              # Frontend static files
+              # ── Static files (frontend build output) ────────────────
               root $PROJECT_DIR/frontend/dist;
               index index.html;
 
-              # Gzip
+              # ── Gzip compression ────────────────────────────────────
               gzip on;
               gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
               gzip_min_length 256;
               gzip_vary on;
 
-              # Security headers
+              # ── Security headers ────────────────────────────────────
               add_header X-Frame-Options "SAMEORIGIN" always;
               add_header X-Content-Type-Options "nosniff" always;
               add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-              # API proxy to backend
+              # ── API reverse proxy → Node.js backend ─────────────────
               location /api {
                   proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
@@ -289,7 +408,7 @@ jobs:
                   proxy_set_header X-Forwarded-Proto \$scheme;
               }
 
-              # WebSocket proxy to backend (Socket.IO)
+              # ── WebSocket proxy → Socket.IO ─────────────────────────
               location /socket.io {
                   proxy_pass http://127.0.0.1:PORT_PLACEHOLDER;
                   proxy_http_version 1.1;
@@ -300,25 +419,24 @@ jobs:
                   proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
               }
 
-              # SPA catch-all: serve index.html for client-side routing
+              # ── SPA fallback — all other routes → index.html ───────
               location / {
                   try_files \$uri \$uri/ /index.html;
               }
           }
           NGINXEOF
 
-          # Enable site
+          # ── Activate nginx config ────────────────────────────────────
+          # Symlink our site into sites-enabled, remove the Debian
+          # default "Welcome to nginx" page, test the config, then
+          # reload (or start if nginx isn't running yet).
           ln -sf /etc/nginx/sites-available/"$SERVICE_NAME" /etc/nginx/sites-enabled/
           rm -f /etc/nginx/sites-enabled/default
-
-          # Test nginx config
           nginx -t || { echo "❌ Nginx config invalid!"; exit 1; }
-
-          # Apply nginx config
           systemctl enable nginx
           systemctl reload nginx || systemctl start nginx
 
-          # ── Start backend service ────────────────────────────────────
+          # ── Start the backend ───────────────────────────────────────
           echo "▶️  Starting backend service..."
           systemctl start "$SERVICE_NAME"
           sleep 3
@@ -333,7 +451,10 @@ jobs:
             exit 1
           fi
 
-          # ── Quick health check ───────────────────────────────────────
+          # ── Health check ────────────────────────────────────────────
+          # Retry the /api/health endpoint up to 6 times (30s total)
+          # because the backend may need a moment to open its port and
+          # run database migrations.
           echo "🏥 Running health check (retry up to 30s)..."
           HEALTH_OK=0
           for i in 1 2 3 4 5 6; do
@@ -350,7 +471,16 @@ jobs:
             tail -20 /var/log/"$SERVICE_NAME"/backend_error.log 2>/dev/null || true
           fi
 
-          # ── Cloudflare Tunnel: add ingress rule for DOMAIN ─────────
+          # ── Cloudflare Tunnel — auto-configure ingress rule ─────────
+          # Only runs when CLOUDFLARED=true AND cloudflared is installed
+          # on the VPS.  Checks if the domain already has an ingress
+          # rule in ~/.cloudflared/config.yml; if not, inserts one.
+          #
+          # The sed command expects the config to end with:
+          #     - service: http_status:404
+          # as the catch-all rule.  It inserts the new hostname rule
+          # right before that catch-all.
+          # ============================================================
           if [ "CLOUDFLARED_PLACEHOLDER" = "true" ]; then
             if command -v cloudflared &> /dev/null; then
               echo "🌐 Configuring cloudflared tunnel for DOMAIN_PLACEHOLDER..."
@@ -360,7 +490,6 @@ jobs:
                   echo "  → Domain already configured in tunnel"
                 else
                   echo "  → Adding ingress: DOMAIN_PLACEHOLDER → http://127.0.0.1:PORT_PLACEHOLDER"
-                  # Use sed s/// with \n for newlines (GNU sed interprets \n as newline)
                   sed -i "s|service: http_status:404|  - hostname: DOMAIN_PLACEHOLDER\n    service: http://127.0.0.1:PORT_PLACEHOLDER\n  - service: http_status:404|" "$CFG" || true
                   systemctl restart cloudflared-tunnel 2>/dev/null || \
                     systemctl restart cloudflared 2>/dev/null || \
@@ -381,14 +510,20 @@ jobs:
           echo "✅ Deployment Complete!"
           SCRIPTEOF
 
-          # ── Substitute placeholders ──────────────────────────────────
+          # ===================================================================
+          # Substitute placeholders in the deploy script with actual values.
+          # PROJECT_DIR and SERVICE_NAME come from workflow-level env.
+          # All other values come from the job-level env (secrets & vars).
+          # ===================================================================
+          sed -i "s|GITHUB_TOKEN_PLACEHOLDER|${GH_TOKEN}|g" /tmp/deploy_script.sh
           sed -i "s|PROJECT_DIR_PLACEHOLDER|${{ env.PROJECT_DIR }}|g" /tmp/deploy_script.sh
           sed -i "s|SERVICE_NAME_PLACEHOLDER|${{ env.SERVICE_NAME }}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|${GOOGLE_CLIENT_ID}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_CLIENT_SECRET_PLACEHOLDER|${GOOGLE_CLIENT_SECRET}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_REDIRECT_URI_PLACEHOLDER|${GOOGLE_REDIRECT_URI}|g" /tmp/deploy_script.sh
 
-          # ── JWT_SECRET: if empty, let the deploy script auto-generate ─
+          # JWT_SECRET: if the user left it as "auto-generate", set to
+          # empty so the deploy script knows to create one.
           if [ "$JWT_SECRET" = "auto-generate" ]; then
             JWT_SECRET=''
           fi
@@ -396,10 +531,10 @@ jobs:
           sed -i "s|JWT_EXPIRATION_PLACEHOLDER|${JWT_EXPIRATION}|g" /tmp/deploy_script.sh
           sed -i "s|REFRESH_TOKEN_EXPIRATION_PLACEHOLDER|${REFRESH_TOKEN_EXPIRATION}|g" /tmp/deploy_script.sh
 
-          # ── PORT: substitute into deploy script ─────────────────────
           sed -i "s|PORT_PLACEHOLDER|${PORT}|g" /tmp/deploy_script.sh
 
-          # ── Parse DOMAIN (always https:// — Cloudflare handles SSL) ─
+          # DOMAIN: strip any protocol prefix (http:// or https://) and
+          # always force https:// since Cloudflare provides SSL.
           DOMAIN_BARE=$(echo "$DOMAIN" | sed -e 's|^https\?://||')
           DOMAIN_FULL="https://${DOMAIN_BARE}"
 
@@ -411,7 +546,11 @@ jobs:
           sed -i "s|NGINX_SERVER_NAME|${DOMAIN_BARE}|g" /tmp/deploy_script.sh
           sed -i "s|CLOUDFLARED_PLACEHOLDER|${CLOUDFLARED}|g" /tmp/deploy_script.sh
 
-          # ── Upload and execute ───────────────────────────────────────
+          # ===================================================================
+          # Upload the script to the VPS and execute it.
+          # Uses a 10-minute timeout, keepalive pings every 30s, and
+          # StrictHostKeyChecking=no since we already scanned the key above.
+          # ===================================================================
           scp /tmp/deploy_script.sh ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }}:/tmp/deploy_script.sh
 
           echo "📡 Executing deployment (timeout: 10 min)..."
