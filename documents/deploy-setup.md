@@ -1,8 +1,8 @@
 # Deploy Workflow (`deploy.yml`)
 
 This document explains the GitHub Actions deploy workflow for IrMeetingApp, covering
-all secrets, environment variables, the SSL/TLS strategy (Cloudflare Tunnel vs.
-manual certs), and how the nginx reverse proxy is configured.
+all secrets, environment variables, how SSL works (Cloudflare Tunnel), and the
+nginx reverse proxy configuration.
 
 ---
 
@@ -13,7 +13,7 @@ The workflow has **3 jobs** that run sequentially:
 | Job | Trigger | Purpose |
 |---|---|---|
 | 🧪 **test** | Always | Runs backend & frontend type-check + tests |
-| 🔧 **setup-vps** | After tests pass | Ensures system packages (nginx, curl, git, build-essential, python3) and Node.js 20 are installed on the VPS |
+| 🔧 **setup-vps** | After tests pass | Installs system packages (nginx, curl, git, build-essential, python3) and Node.js 20 if missing. Cleans up any broken pre-existing nginx configs. |
 | 🚀 **deploy** | After setup-vps | Clones/pulls the repo, builds backend & frontend, writes `.env`, configures nginx, starts the systemd service, configures Cloudflare tunnel if enabled |
 
 Triggered by: pushes to `master` or manual `workflow_dispatch`.
@@ -36,13 +36,11 @@ These **must** be set in **Repository → Settings → Secrets and variables →
 
 | Secret | Default | Purpose |
 |---|---|---|
-| `VPS_USER` | `root` | SSH username (the workflow uses `secrets.VPS_USER \|\| 'root'`) |
-| `JWT_SECRET` | `auto-generate` | JWT signing secret; auto-generated (persisted across deploys) if not set |
+| `VPS_USER` | `root` | SSH username (`secrets.VPS_USER \|\| 'root'`) |
+| `JWT_SECRET` | `auto-generate` | JWT signing secret; auto-generated and persisted across deploys if not set |
 | `PORT` | `3001` | Backend port |
 | `DOMAIN` | `localhost` | Your app domain, e.g. `yourdomain.com` or `https://yourdomain.com` |
-| `CLOUDFLARED` | `false` | Set to `true` to enable Cloudflare Tunnel auto-configuration |
-| `SSL_CERT_B64` | _(empty)_ | Base64-encoded SSL certificate (only needed for manual SSL) |
-| `SSL_KEY_B64` | _(empty)_ | Base64-encoded SSL private key (only needed for manual SSL) |
+| `CLOUDFLARED` | `false` | Set to `true` to auto-configure the Cloudflare Tunnel ingress rule |
 
 ### Optional Variables
 
@@ -53,68 +51,44 @@ These **must** be set in **Repository → Settings → Secrets and variables →
 
 ---
 
-## SSL / HTTPS Strategy
+## SSL / HTTPS — How It Works
 
-The deploy workflow supports **two SSL modes**. The choice is determined automatically:
+**SSL is fully handled by Cloudflare Tunnel.** You do not need to think about SSL
+certificates, manage renewals, or set any SSL-related secrets. The architecture:
 
-### Mode 1: Cloudflare Tunnel (recommended)
+```
+User → https://yourdomain.com → Cloudflare (SSL terminates here) → cloudflared tunnel → VPS nginx (port 80, plain HTTP)
+```
 
-**Set `CLOUDFLARED = true`** in GitHub secrets.
+- Cloudflare provides HTTPS at the edge for free
+- Nginx on the VPS always listens on **HTTP port 80 only** — no SSL certs on the server
+- `FRONTEND_URL` is always `https://<your-domain>` regardless of what you put in `DOMAIN`
+- The `DOMAIN` secret is parsed to strip any protocol prefix; the result is always treated as https
 
-- Cloudflare Tunnel handles SSL termination at Cloudflare's edge — the user
-  connects via HTTPS to Cloudflare, and Cloudflare tunnels to your VPS over a
-  secure connection.
-- Nginx listens on **HTTP port 80 only** (no SSL certs on the VPS).
-- The deploy script auto-configures `cloudflared` by adding an ingress rule for
-  your domain to `~/.cloudflared/config.yml`.
+This means:
+- ✅ No certificate provisioning
+- ✅ No certificate renewal
+- ✅ No SSL configuration in nginx
+- ✅ Works as long as cloudflared is running on the VPS
 
-**Prerequisites:**
-- `cloudflared` must already be installed on the VPS and authenticated to a
-  Cloudflare Tunnel (`cloudflared tunnel login`).
-- The domain's DNS must point to Cloudflare (orange-clouded).
+### What You Need
 
-**SSL decision logic:** When `CLOUDFLARED = true`, `USE_SSL` is forced to
-`false` — no manual certs are deployed to nginx.
-
-### Mode 2: Manual SSL Certificates
-
-**Do NOT set `CLOUDFLARED` (or set it to `false`).** Provide both
-`SSL_CERT_B64` and `SSL_KEY_B64`.
-
-- The deploy script base64-decodes the cert/key into `/opt/irmeeting/ssl/`.
-- Nginx is configured with **HTTPS on port 443** + HTTP→HTTPS redirect on port 80.
-- The `SSL_CERT_B64` / `SSL_KEY_B64` secrets are not needed (and ignored) when
-  using Cloudflare Tunnel.
-
-### Mode 3: Plain HTTP (no SSL)
-
-If all of these are true:
-- `CLOUDFLARED` is not `true`
-- `SSL_CERT_B64` or `SSL_KEY_B64` is empty
-- `DOMAIN` starts with `http://`
-
-...then nginx listens on **port 80 only** with no HTTPS. This is only suitable
-for local/VPN testing.
-
-### Summary Table
-
-| CLOUDFLARED | SSL_CERT_B64 | SSL_KEY_B64 | DOMAIN starts with | Result |
-|---|---|---|---|---|
-| `true` | _(ignored)_ | _(ignored)_ | _(any)_ | **Cloudflare Tunnel** — nginx HTTP only |
-| `false` | provided | provided | `https://` | **Manual SSL** — nginx HTTPS + redirect |
-| `false` | empty | empty | `http://` | **Plain HTTP** — nginx HTTP only |
+1. A Cloudflare Tunnel already set up on the VPS (`cloudflared tunnel login` + `cloudflared tunnel create`)
+2. The domain's DNS pointing to Cloudflare (orange-clouded proxy)
+3. Set `CLOUDFLARED=true` in GitHub secrets to let the deploy script auto-add the ingress rule
 
 ---
 
 ## DOMAIN Parsing
 
-The `DOMAIN` secret can be provided with or without a protocol prefix:
+The `DOMAIN` secret accepts these formats:
 
-- `yourdomain.com` → treated as `https://yourdomain.com`
-- `https://yourdomain.com` → used as-is
-- `http://yourdomain.com` → used as-is (forces plain HTTP if no SSL)
+- `yourdomain.com` → `FRONTEND_URL` becomes `https://yourdomain.com`
+- `https://yourdomain.com` → same result
+- `http://yourdomain.com` → same result (always upgraded to https)
 
-The `FRONTEND_URL` in the backend `.env` is set to the full domain (with protocol).
+The protocol prefix is always stripped and replaced with `https://` because
+Cloudflare handles SSL termination.
 
 ---
 
@@ -123,12 +97,42 @@ The `FRONTEND_URL` in the backend `.env` is set to the full domain (with protoco
 The deploy script generates an nginx site config at
 `/etc/nginx/sites-available/irmeeting`:
 
+- **Listen:** port 80 (HTTP only — Cloudflare provides HTTPS)
 - **API proxy:** `/api` → `http://127.0.0.1:<PORT>`
 - **WebSocket proxy:** `/socket.io` → `http://127.0.0.1:<PORT>` (with upgrade headers for Socket.IO)
-- **SPA catch-all:** All other paths serve `index.html` from the frontend build
-- Old nginx configs in `sites-enabled/` (including `default`) are removed
-- The `setup-vps` job also cleans up any broken SSL configs that reference
-  missing certificates (e.g., leftover Jitsi Meet configs)
+- **SPA catch-all:** all other paths serve `index.html` from the frontend build
+- **Security headers:** `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`
+- **Gzip:** enabled for text, css, js, xml, svg
+
+The `default` nginx site is removed. Any other configs in `sites-enabled/` that
+were not created by this workflow are left untouched (use the cleanup logic below
+if you need to remove them).
+
+### Nginx Cleanup (setup-vps)
+
+Both the **system packages** and **Node.js install** steps in `setup-vps` run
+a cleanup before any `apt-get` operation:
+
+```bash
+for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+  [ -d "$d" ] && find "$d" -maxdepth 1 \( -type f -o -type l \) \
+    -exec grep -l "ssl_certificate\|ssl_certificate_key" {} \; \
+    -delete 2>/dev/null || true
+done
+```
+
+This finds and deletes any nginx config (file or symlink) in `sites-enabled/`
+or `conf.d/` that references `ssl_certificate` or `ssl_certificate_key` — this
+handles leftover Jitsi Meet configs or other broken SSL configs that would
+prevent nginx from starting.
+
+After cleanup, `dpkg --configure -a` runs to fix any packages stuck in
+half-configured state.
+
+**Why in both steps?** The Node.js install step runs its own `apt-get install
+nodejs`, which triggers `dpkg --configure nginx` as a side effect. If nginx
+was half-configured from a previous failed deploy, the Node.js step would
+fail without its own cleanup guard.
 
 ---
 
@@ -170,32 +174,47 @@ The backend runs as a systemd service named `irmeeting`:
 
 ## Troubleshooting
 
-### SSH fails with usage error
+### SSH fails with usage error (`ssh @***`)
 
-If you see `ssh @***` in the logs, the `VPS_USER` secret is not set. The
-workflow defaults to `root`. Either set the secret or ensure `root` works with
-your SSH key.
+The `VPS_USER` secret is not set. The workflow defaults to `root`. Either add
+the secret or ensure `root` SSH login works with your private key.
 
-### nginx fails to start: "cannot load certificate"
+### nginx fails to start — "cannot load certificate"
 
-The VPS may have leftover nginx configs from a previous app (e.g. Jitsi Meet)
-that reference missing SSL certificates. The `setup-vps` job now automatically
-detects and removes any `sites-enabled/` configs containing `ssl_certificate`
-directives before nginx starts. If this still fails, SSH into the VPS and
-manually remove files from `/etc/nginx/sites-enabled/`.
+There are leftover nginx configs from a previous app (e.g. Jitsi Meet) that
+reference missing SSL certificates. The `setup-vps` job automatically removes
+any config in `sites-enabled/` or `conf.d/` containing `ssl_certificate`
+directives using `find -delete`.
 
-### debconf Dialog/Readline errors
+If this still fails, SSH into the VPS and manually run:
 
-These occur when `apt-get` is run over SSH without a TTY. The workflow sets
-`DEBIAN_FRONTEND=noninteractive` to prevent this.
+```bash
+rm -f /etc/nginx/sites-enabled/localhost.conf
+rm -f /etc/nginx/conf.d/*.conf   # if any SSL configs there
+dpkg --configure -a
+systemctl start nginx
+```
+
+### `debconf: unable to initialize frontend` errors
+
+Occurs when `apt-get` runs over SSH without a TTY. The workflow sets
+`DEBIAN_FRONTEND=noninteractive` in all steps that use apt.
 
 ### Cloudflare Tunnel ingress not updating
 
-The deploy script uses `sed` to insert ingress rules. If the `~/.cloudflared/config.yml`
-format doesn't match the expected pattern (ending with `service: http_status:404`),
-the insertion may fail silently. Verify the config file format manually.
+The deploy script uses `sed` to insert ingress rules. If the
+`~/.cloudflared/config.yml` format doesn't match the expected pattern (ending
+with `service: http_status:404`), the insertion fails silently. Verify the
+config file format matches the expected structure above.
 
 ### Node.js installed but wrong version
 
-The workflow checks for `v20.*` specifically. If a different Node.js version is
-installed, it will download and run the NodeSource setup script for v20.
+The workflow checks for `v20.*` specifically. If a different version is
+present, it downloads and runs the NodeSource setup script for v20.
+
+### "1 not fully installed or removed" — nginx stuck in half-configured state
+
+This happens when a previous `apt-get install nginx` failed (usually because
+of a broken config that prevented nginx from starting its post-install test).
+The `setup-vps` cleanup now handles this by removing broken configs and running
+`dpkg --configure -a`. If it persists, SSH in and run the manual fix above.
