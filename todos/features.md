@@ -26,7 +26,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 2. Add Cover Photo and Photo Gallery to Meetings
+## 2. Add Cover Photo and Photo Gallery to Meetings ✅ Done (58ddab2)
 
 **Request:** Meetings should support a cover photo (single image) and a photo gallery (multiple images) to make events more visually engaging.
 
@@ -145,3 +145,29 @@ Requested features to implement. Keep adding as you think of them.
 - Predefined tags (admin-managed) vs user-created tags?
 - How many tags per meeting (max)?
 - Tag colors: predefined palette or custom hex?
+
+---
+
+## 6. Configurable Ports via GitHub Secrets (Optional) ✅ Done (6236483)
+
+**Request:** Make the backend port (3001) and frontend port (5173) configurable via optional GitHub Secrets (`BACKEND_PORT`, `FRONTEND_PORT`) so the CI workflow and E2E tests can run on different ports when the defaults are already in use on the deployment server.
+
+**Scope:**
+- **CI workflow** (`.github/workflows/ci.yml`): Add `BACKEND_PORT` and `FRONTEND_PORT` as workflow-level env vars pulling from `secrets.BACKEND_PORT` / `secrets.FRONTEND_PORT` with fallback defaults (`3001` / `5173`). Use them to build `GOOGLE_REDIRECT_URI` and `FRONTEND_URL` dynamically.
+- **E2E Playwright config** (`tests/playwright.config.ts`): Read `BACKEND_PORT` and `FRONTEND_PORT` from env, defaulting to `3001` / `5173`. Use them for `baseURL`, `webServer` URLs, and health check URLs.
+- **E2E helpers** (`tests/helpers/api.ts`): Read `BACKEND_URL` and `FRONTEND_URL` from env with port-based defaults.
+- **Backend env.ts**: Already reads `PORT` from env — no change needed.
+- **Frontend vite.config.ts**: Already hardcodes port 5173 and proxy target 3001. Could optionally read from env vars (`VITE_BACKEND_PORT`, `VITE_FRONTEND_PORT`) for dev flexibility.
+- **Scripts** (`dev.sh`, `prod.sh`): Could optionally read ports from env vars, but this is lower priority since they're local dev scripts.
+
+**Files:**
+- `.github/workflows/ci.yml` — add `BACKEND_PORT` / `FRONTEND_PORT` env vars with secret fallback
+- `tests/playwright.config.ts` — read ports from env
+- `tests/helpers/api.ts` — read ports from env
+- `frontend/vite.config.ts` — optionally read ports from env
+- `scripts/dev.sh` / `scripts/prod.sh` — optionally read ports from env
+
+**Open questions:**
+- Just CI/E2E or also the local dev scripts?
+- Should the frontend proxy target also be configurable?
+- Port defaults: keep 3001/5173 as the universal default?

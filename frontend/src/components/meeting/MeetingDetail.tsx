@@ -6,8 +6,9 @@ import { Modal } from '../ui/Modal';
 import { ConnectionStatus } from './ConnectionStatus';
 import { ParticipantList } from './ParticipantList';
 import { useAuth } from '../../auth/AuthContext';
-import { useState } from 'react';
-import type { MeetingResponse } from '../../types';
+import { useRef, useState } from 'react';
+import { ImageLightbox } from './ImageLightbox';
+import type { MeetingResponse, MeetingPhoto } from '../../types';
 
 interface MeetingDetailProps {
   meeting: MeetingResponse;
@@ -18,6 +19,9 @@ interface MeetingDetailProps {
   isJoining: boolean;
   isLeaving: boolean;
   isCancelling: boolean;
+  isUploading?: boolean;
+  onUploadPhoto?: (file: File) => void;
+  onDeletePhoto?: (photoId: string) => void;
 }
 
 export function MeetingDetail({
@@ -29,6 +33,9 @@ export function MeetingDetail({
   isJoining,
   isLeaving,
   isCancelling,
+  isUploading,
+  onUploadPhoto,
+  onDeletePhoto,
 }: MeetingDetailProps) {
   const { user } = useAuth();
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -41,9 +48,51 @@ export function MeetingDetail({
   const isPast = meeting.status === 'ended' || meeting.status === 'cancelled';
 
   const statusLabel = meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const photos = meeting.photos ?? [];
+
+  // Build a single list of viewable images for the lightbox (cover first, then gallery).
+  const lightboxPhotos = [
+    ...(meeting.coverPhotoUrl ? [{ id: 'cover', url: meeting.coverPhotoUrl, alt: meeting.title }] : []),
+    ...photos.map((photo) => ({ id: photo.id, url: photo.url, alt: '' })),
+  ];
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+
+  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Step 1: Grab the selected gallery photo and hand it off to the parent handler.
+    const file = e.target.files?.[0];
+    if (file && onUploadPhoto) onUploadPhoto(file);
+    // Step 2: Reset the input so the same file can be selected again if needed.
+    if (e.target) e.target.value = '';
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Step 1: Cover photo hero — show the stored cover or a placeholder. */}
+      {meeting.coverPhotoUrl ? (
+        <button
+          type="button"
+          onClick={() => setActivePhotoIndex(0)}
+          className="block w-full h-56 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 cursor-zoom-in"
+          aria-label="View cover photo full-size"
+        >
+          <img
+            src={meeting.coverPhotoUrl}
+            alt={meeting.title}
+            className="w-full h-full object-cover"
+          />
+        </button>
+      ) : (
+        <div className="w-full h-32 sm:h-48 rounded-xl bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/40 dark:to-primary-800/30 border border-dashed border-primary-300 dark:border-primary-700 flex items-center justify-center">
+          <div className="text-center">
+            <svg className="w-12 h-12 text-primary-400 dark:text-primary-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">No cover photo</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -112,6 +161,77 @@ export function MeetingDetail({
         <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{meeting.description}</p>
       </div>
 
+      {/* Step 2: Photo gallery — grid of uploaded meeting photos with host controls. */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Photos</h3>
+          {isHost && !isPast && onUploadPhoto && (
+            <div className="flex items-center gap-2">
+              <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add photo</span>
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  onChange={handleGalleryFileChange}
+                  className="sr-only"
+                  disabled={isUploading}
+                  data-testid="gallery-photo-input"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {photos.length === 0 ? (
+          <div className="text-center py-10 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+            <p className="text-sm">No photos yet.</p>
+            {isHost && !isPast && (
+              <p className="text-xs mt-1">Upload photos to share moments from this meeting.</p>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {photos.map((photo: MeetingPhoto, index: number) => (
+              <div
+                key={photo.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActivePhotoIndex(meeting.coverPhotoUrl ? index + 1 : index)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActivePhotoIndex(meeting.coverPhotoUrl ? index + 1 : index);
+                  }
+                }}
+                className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-left cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="View photo full-size"
+              >
+                <img src={photo.url} alt="" className="w-full h-full object-cover" />
+                {isHost && !isPast && onDeletePhoto && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeletePhoto(photo.id);
+                    }}
+                    className="absolute top-2 right-2 bg-gray-900/70 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                    aria-label="Delete photo"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Join/Leave button */}
       {user && !isHost && !isPast && (
         <div className="flex justify-center">
@@ -150,6 +270,15 @@ export function MeetingDetail({
           Are you sure you want to cancel &quot;{meeting.title}&quot;? Participants will be notified and the meeting will remain visible as cancelled.
         </p>
       </Modal>
+
+      {/* Lightbox for full-size cover/gallery photo viewing */}
+      <ImageLightbox
+        photos={lightboxPhotos}
+        currentIndex={activePhotoIndex ?? 0}
+        isOpen={activePhotoIndex !== null}
+        onClose={() => setActivePhotoIndex(null)}
+        onNavigate={setActivePhotoIndex}
+      />
     </div>
   );
 }

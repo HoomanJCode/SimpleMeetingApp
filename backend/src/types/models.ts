@@ -21,6 +21,7 @@ export interface Meeting {
   location: string;
   capacity: number;
   status: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
+  coverPhotoUrl: string | null;
   createdAt: string;
   updatedAt: string;
   // Joined fields
@@ -28,6 +29,14 @@ export interface Meeting {
   hostAvatarUrl?: string | null;
   participantCount?: number;
   isJoined?: boolean;
+  photos?: MeetingPhoto[];
+}
+
+export interface MeetingPhoto {
+  id: string;
+  meetingId: string;
+  url: string;
+  createdAt: string;
 }
 
 export interface Participant {
@@ -53,6 +62,8 @@ export interface MeetingFilters {
   limit?: number;
   search?: string;
   status?: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface PaginatedResult<T> {

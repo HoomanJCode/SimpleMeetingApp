@@ -14,6 +14,8 @@ const mockUser: User = {
 
 vi.mock('../../api/auth', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(mockUser)),
+  getAuthMethod: vi.fn(() => Promise.resolve({ method: 'userpass' })),
+  loginWithPassword: vi.fn(),
 }));
 
 const configureApiClientMock = vi.fn();

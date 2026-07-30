@@ -8,6 +8,8 @@ import {
   joinMeeting as apiJoinMeeting,
   leaveMeeting as apiLeaveMeeting,
   getMyMeetings,
+  uploadMeetingPhoto as apiUploadMeetingPhoto,
+  deleteMeetingPhoto as apiDeleteMeetingPhoto,
   type CreateMeetingInput,
   type UpdateMeetingInput,
   type MeetingListResponse,
@@ -32,7 +34,7 @@ export function useMeetingList(params?: Record<string, string | number>) {
     } finally {
       setIsLoading(false);
     }
-  }, [params?.page, params?.search, params?.status]);
+  }, [params?.page, params?.search, params?.status, params?.fromDate, params?.toDate, params?.limit]);
 
   useEffect(() => {
     fetch();
@@ -165,4 +167,36 @@ export function useLeaveMeeting() {
   }, []);
 
   return { leave, isLoading };
+}
+
+export function useUploadMeetingPhoto() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Wrap the raw upload API in a hook that exposes an `isLoading` flag.
+  const upload = useCallback(async (meetingId: string, file: File) => {
+    setIsLoading(true);
+    try {
+      return await apiUploadMeetingPhoto(meetingId, file);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { upload, isLoading };
+}
+
+export function useDeleteMeetingPhoto() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Wrap the raw delete API in a hook that exposes an `isLoading` flag.
+  const remove = useCallback(async (meetingId: string, photoId: string) => {
+    setIsLoading(true);
+    try {
+      await apiDeleteMeetingPhoto(meetingId, photoId);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { remove, isLoading };
 }

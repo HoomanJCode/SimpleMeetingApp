@@ -6,6 +6,9 @@ import path from 'path';
 // update both files together if you swap module systems.
 const TEST_ENV = require('../scripts/test-env.cjs').all;
 
+const BACKEND_PORT = process.env.BACKEND_PORT || '3001';
+const FRONTEND_PORT = process.env.FRONTEND_PORT || '5173';
+
 export default defineConfig({
   testDir: './e2e',
   // workers: 1 is required because tests/ helpers/setup.ts runs resetDb()
@@ -23,7 +26,7 @@ export default defineConfig({
   timeout: 30_000,
 
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: `http://127.0.0.1:${FRONTEND_PORT}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -46,18 +49,19 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm run dev',
-      url: 'http://127.0.0.1:3001/api/health',
+      url: `http://127.0.0.1:${BACKEND_PORT}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       cwd: path.resolve(__dirname, '../backend'),
       env: {
         ...process.env,
         ...TEST_ENV,
+        PORT: BACKEND_PORT,
       },
     },
     {
-      command: 'npm run dev -- --host 127.0.0.1',
-      url: 'http://127.0.0.1:5173',
+      command: `npm run dev -- --host 127.0.0.1 --port ${FRONTEND_PORT}`,
+      url: `http://127.0.0.1:${FRONTEND_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       cwd: path.resolve(__dirname, '../frontend'),

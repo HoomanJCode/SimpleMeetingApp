@@ -35,3 +35,5 @@ playwright-report/
 
 # Temp
 tmp/
+test-image.png
+test_image.png

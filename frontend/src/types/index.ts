@@ -5,6 +5,13 @@ export interface User {
   avatarUrl: string | null;
 }
 
+export interface MeetingPhoto {
+  id: string;
+  meetingId: string;
+  url: string;
+  createdAt: string;
+}
+
 export interface Meeting {
   id: string;
   hostId: string;
@@ -14,6 +21,8 @@ export interface Meeting {
   location: string;
   capacity: number;
   status: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
+  coverPhotoUrl: string | null;
+  photos?: MeetingPhoto[];
   createdAt: string;
   updatedAt: string;
   hostName?: string;

@@ -50,6 +50,16 @@ export function createApp() {
     generalLimiter(req, res, next);
   });
 
+  // Serve uploaded photos. Allow cross-origin loading so the frontend can display
+  // images even when running on a different host/port (common in dev).
+  const uploadsPath = path.resolve(process.cwd(), 'uploads');
+  if (fs.existsSync(uploadsPath)) {
+    app.use('/uploads', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+      next();
+    }, express.static(uploadsPath, { maxAge: '7d' }));
+  }
+
   // Routes
   app.use('/api', routes);
 

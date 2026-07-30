@@ -13,6 +13,7 @@ const CreateMeetingPage = lazy(() => import('./pages/CreateMeetingPage'));
 const EditMeetingPage = lazy(() => import('./pages/EditMeetingPage'));
 const MeetingDetailPage = lazy(() => import('./pages/MeetingDetailPage'));
 const MyMeetingsPage = lazy(() => import('./pages/MyMeetingsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const router = createBrowserRouter(
@@ -36,6 +37,7 @@ const router = createBrowserRouter(
         { path: '/meetings/:id', element: <MeetingDetailPage /> },
         { path: '/meetings/:id/edit', element: <ProtectedRoute><EditMeetingPage /></ProtectedRoute> },
         { path: '/my-meetings', element: <ProtectedRoute><MyMeetingsPage /></ProtectedRoute> },
+        { path: '/calendar', element: <CalendarPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

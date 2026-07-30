@@ -41,6 +41,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   const db = getDb();
+  db.prepare('DELETE FROM meeting_photos').run();
   db.prepare('DELETE FROM participants').run();
   db.prepare('DELETE FROM meetings').run();
 });
@@ -210,24 +211,27 @@ describe('Meeting API', () => {
     });
   });
 
-  describe('DELETE /api/meetings/:id', () => {
-    it('deletes meeting when host', async () => {
+  describe('POST /api/meetings/:id/cancel', () => {
+    it('cancels meeting when host', async () => {
       const created = await request(app)
         .post('/api/meetings')
         .set('Authorization', `Bearer ${hostToken}`)
         .send(validMeeting())
         .expect(201);
 
-      await request(app)
-        .delete(`/api/meetings/${created.body.id}`)
+      const res = await request(app)
+        .post(`/api/meetings/${created.body.id}/cancel`)
         .set('Authorization', `Bearer ${hostToken}`)
-        .expect(204);
+        .expect(200);
 
-      // Verify it's gone
-      await request(app).get(`/api/meetings/${created.body.id}`).expect(404);
+      expect(res.body.status).toBe('cancelled');
+
+      // Verify it still exists but is cancelled
+      const getRes = await request(app).get(`/api/meetings/${created.body.id}`).expect(200);
+      expect(getRes.body.status).toBe('cancelled');
     });
 
-    it('returns 403 when non-host tries to delete', async () => {
+    it('returns 403 when non-host tries to cancel', async () => {
       const created = await request(app)
         .post('/api/meetings')
         .set('Authorization', `Bearer ${hostToken}`)
@@ -235,7 +239,7 @@ describe('Meeting API', () => {
         .expect(201);
 
       await request(app)
-        .delete(`/api/meetings/${created.body.id}`)
+        .post(`/api/meetings/${created.body.id}/cancel`)
         .set('Authorization', `Bearer ${otherToken}`)
         .expect(403);
     });
@@ -357,6 +361,169 @@ describe('Meeting API', () => {
         .post(`/api/meetings/${created.body.id}/leave`)
         .set('Authorization', `Bearer ${otherToken}`)
         .expect(409);
+    });
+  });
+
+  describe('POST /api/meetings/:id/photos', () => {
+    // Smallest valid PNG: 1×1 blue pixel
+    const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAQoeQgQAAAABJRU5ErkJggg==', 'base64');
+
+    it('allows host to upload a photo', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      const res = await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .attach('photo', testImage, 'test.png')
+        .expect(201);
+
+      expect(res.body.id).toBeDefined();
+      expect(res.body.meetingId).toBe(created.body.id);
+      expect(res.body.url).toContain('/uploads/meetings/');
+      expect(res.body.createdAt).toBeDefined();
+    });
+
+    it('returns 400 when no file is attached', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .expect(400);
+    });
+
+    it('returns 403 when non-host tries to upload a photo', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .attach('photo', testImage, 'test.png')
+        .expect(403);
+    });
+
+    it('returns 401 when not authenticated', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .attach('photo', testImage, 'test.png')
+        .expect(401);
+    });
+
+    it('rejects non-image files', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      // Multer's fileFilter rejects non-image extensions via next(err),
+      // which bypasses the route handler and reaches the global error handler.
+      // Since it's a plain Error (not AppError), the global handler returns 500.
+      const res = await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .attach('photo', Buffer.from('not an image'), 'malicious.txt')
+        .expect(500);
+
+      expect(res.body.error).toBeDefined();
+    });
+  });
+
+  describe('DELETE /api/meetings/:id/photos/:photoId', () => {
+    const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAQoeQgQAAAABJRU5ErkJggg==', 'base64');
+
+    it('allows host to delete a photo', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      const photo = await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .attach('photo', testImage, 'test.png')
+        .expect(201);
+
+      await request(app)
+        .delete(`/api/meetings/${created.body.id}/photos/${photo.body.id}`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .expect(204);
+
+      // Verify photo is removed from meeting detail
+      const meeting = await request(app)
+        .get(`/api/meetings/${created.body.id}`)
+        .expect(200);
+
+      expect(meeting.body.photos).toHaveLength(0);
+    });
+
+    it('returns 403 when non-host tries to delete a photo', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      const photo = await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .attach('photo', testImage, 'test.png')
+        .expect(201);
+
+      await request(app)
+        .delete(`/api/meetings/${created.body.id}/photos/${photo.body.id}`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .expect(403);
+    });
+
+    it('returns 404 when photo does not exist', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      await request(app)
+        .delete(`/api/meetings/${created.body.id}/photos/nonexistent`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .expect(404);
+    });
+
+    it('returns 401 when not authenticated', async () => {
+      const created = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send(validMeeting())
+        .expect(201);
+
+      const photo = await request(app)
+        .post(`/api/meetings/${created.body.id}/photos`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .attach('photo', testImage, 'test.png')
+        .expect(201);
+
+      await request(app)
+        .delete(`/api/meetings/${created.body.id}/photos/${photo.body.id}`)
+        .expect(401);
     });
   });
 

@@ -91,6 +91,10 @@ async function request<T>(method: string, path: string, body?: unknown, isRetry 
   return res.json();
 }
 
+export function getAccessToken(): string | null {
+  return getTokenFn?.() ?? null;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),

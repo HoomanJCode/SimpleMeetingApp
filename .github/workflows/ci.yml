@@ -16,6 +16,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      BACKEND_PORT: ${{ secrets.BACKEND_PORT || '3001' }}
+      FRONTEND_PORT: ${{ secrets.FRONTEND_PORT || '5173' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +40,9 @@ jobs:
           NODE_ENV: test
           GOOGLE_CLIENT_ID: ci-google-client-id
           GOOGLE_CLIENT_SECRET: ci-google-client-secret
-          GOOGLE_REDIRECT_URI: http://localhost:3001/api/auth/google/callback
+          GOOGLE_REDIRECT_URI: http://localhost:${{ env.BACKEND_PORT }}/api/auth/google/callback
           JWT_SECRET: ci-jwt-secret-at-least-32-characters-long-for-testing
-          FRONTEND_URL: http://localhost:5173
+          FRONTEND_URL: http://localhost:${{ env.FRONTEND_PORT }}
 
   frontend-lint-and-test:
     name: Frontend lint + test
@@ -71,6 +74,9 @@ jobs:
     defaults:
       run:
         working-directory: tests
+    env:
+      BACKEND_PORT: ${{ secrets.BACKEND_PORT || '3001' }}
+      FRONTEND_PORT: ${{ secrets.FRONTEND_PORT || '5173' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -105,11 +111,13 @@ jobs:
           # Dummy values are enough: E2E tests bypass OAuth via /api/test/login.
           GOOGLE_CLIENT_ID: ci-google-client-id
           GOOGLE_CLIENT_SECRET: ci-google-client-secret
-          GOOGLE_REDIRECT_URI: http://localhost:3001/api/auth/google/callback
+          GOOGLE_REDIRECT_URI: http://localhost:${{ env.BACKEND_PORT }}/api/auth/google/callback
           JWT_SECRET: ci-jwt-secret-at-least-32-characters-long-for-testing
-          FRONTEND_URL: http://localhost:5173
+          FRONTEND_URL: http://localhost:${{ env.FRONTEND_PORT }}
           ENABLE_TEST_ROUTES: '1'
           NODE_ENV: test
+          BACKEND_PORT: ${{ env.BACKEND_PORT }}
+          FRONTEND_PORT: ${{ env.FRONTEND_PORT }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
