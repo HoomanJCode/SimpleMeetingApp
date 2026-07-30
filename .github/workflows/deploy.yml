@@ -219,6 +219,7 @@ jobs:
           PORT: ${{ secrets.PORT || '3001' }}
           DOMAIN: ${{ secrets.DOMAIN || 'localhost' }}
           CLOUDFLARED: ${{ secrets.CLOUDFLARED || 'false' }}
+          GH_TOKEN: ${{ secrets.GH_PRIVATE_REPO_TOKEN }}
         run: |
           # ===================================================================
           # Build the deploy script as a heredoc with PLACEHOLDER strings.
@@ -231,6 +232,7 @@ jobs:
 
           PROJECT_DIR="PROJECT_DIR_PLACEHOLDER"
           SERVICE_NAME="SERVICE_NAME_PLACEHOLDER"
+          GH_TOKEN="GITHUB_TOKEN_PLACEHOLDER"
 
           echo "========================================"
           echo "  IrMeetingApp Deployment"
@@ -257,11 +259,13 @@ jobs:
           if [ -d "$PROJECT_DIR/.git" ]; then
             echo "📥 Pulling latest code..."
             cd "$PROJECT_DIR"
+            # Ensure the remote uses the token (fixes repos cloned before this).
+            git remote set-url origin https://${GH_TOKEN}@github.com/HoomanJCode/IrMeetingApp.git 2>/dev/null || true
             run_with_timeout 300 git fetch origin || exit 1
             run_with_timeout 300 git reset --hard origin/master || exit 1
           else
             echo "📥 Cloning repository..."
-            run_with_timeout 300 git clone --branch master https://github.com/HoomanJCode/IrMeetingApp.git "$PROJECT_DIR" || exit 1
+            run_with_timeout 300 git clone --branch master https://${GH_TOKEN}@github.com/HoomanJCode/IrMeetingApp.git "$PROJECT_DIR" || exit 1
             cd "$PROJECT_DIR"
           fi
 
@@ -511,6 +515,7 @@ jobs:
           # PROJECT_DIR and SERVICE_NAME come from workflow-level env.
           # All other values come from the job-level env (secrets & vars).
           # ===================================================================
+          sed -i "s|GITHUB_TOKEN_PLACEHOLDER|${GH_TOKEN}|g" /tmp/deploy_script.sh
           sed -i "s|PROJECT_DIR_PLACEHOLDER|${{ env.PROJECT_DIR }}|g" /tmp/deploy_script.sh
           sed -i "s|SERVICE_NAME_PLACEHOLDER|${{ env.SERVICE_NAME }}|g" /tmp/deploy_script.sh
           sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|${GOOGLE_CLIENT_ID}|g" /tmp/deploy_script.sh
