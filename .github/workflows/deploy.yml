@@ -64,15 +64,30 @@ jobs:
           ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
       - run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 📦 Install system packages
+      - name: 📦 Install system packages (only if missing)
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
-            'apt-get update -qq && apt-get install -y -qq nginx curl git build-essential python3'
+            'missing=""
+             for pkg in nginx curl git build-essential python3; do
+               dpkg -s "$pkg" >/dev/null 2>&1 || missing="$missing $pkg"
+             done
+             if [ -n "$missing" ]; then
+               echo "Installing:$missing"
+               apt-get update -qq && apt-get install -y -qq $missing
+             else
+               echo "All system packages already installed"
+             fi'
 
       - name: 🔧 Install Node.js 20 (if missing)
         run: |
           ssh -o ConnectTimeout=10 ${{ secrets.VPS_USER || 'root' }}@${{ secrets.VPS_HOST }} \
-            'command -v node >/dev/null || (curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs)'
+            'node_ver=$(node -v 2>/dev/null || true)
+             if echo "$node_ver" | grep -q "^v20\."; then
+               echo "Node.js 20 already installed: $node_ver"
+             else
+               echo "Installing Node.js 20..."
+               curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs
+             fi'
 
       - name: ✅ Verify tooling
         run: |
