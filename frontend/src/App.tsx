@@ -14,6 +14,7 @@ const EditMeetingPage = lazy(() => import('./pages/EditMeetingPage'));
 const MeetingDetailPage = lazy(() => import('./pages/MeetingDetailPage'));
 const MyMeetingsPage = lazy(() => import('./pages/MyMeetingsPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const TimelinePage = lazy(() => import('./pages/TimelinePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const router = createBrowserRouter(
@@ -38,6 +39,7 @@ const router = createBrowserRouter(
         { path: '/meetings/:id/edit', element: <ProtectedRoute><EditMeetingPage /></ProtectedRoute> },
         { path: '/my-meetings', element: <ProtectedRoute><MyMeetingsPage /></ProtectedRoute> },
         { path: '/calendar', element: <CalendarPage /> },
+        { path: '/timeline', element: <TimelinePage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

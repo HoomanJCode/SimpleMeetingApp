@@ -38,6 +38,15 @@ export function seedDatabase(): void {
     ('m1', 'u3'),
     ('m2', 'u1'),
     ('m2', 'u3');
+
+    -- Sample tags (tag rows are seeded by the 006 migration)
+    INSERT INTO meeting_tags (meeting_id, tag_id) VALUES
+    ('m1', 'tag-tech'),
+    ('m1', 'tag-networking'),
+    ('m2', 'tag-workshop'),
+    ('m2', 'tag-online'),
+    ('m3', 'tag-tech'),
+    ('m3', 'tag-online');
   `);
 
   logger.info('Database seeded successfully');

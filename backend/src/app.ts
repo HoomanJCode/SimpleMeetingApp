@@ -42,13 +42,8 @@ export function createApp() {
   // Body parsing
   app.use(express.json({ limit: '1mb' }));
 
-  // Rate limiting — skip test routes to avoid throttling E2E DB resets
-  app.use((req, res, next) => {
-    if (process.env.ENABLE_TEST_ROUTES === '1' && req.path.startsWith('/api/test/')) {
-      return next();
-    }
-    generalLimiter(req, res, next);
-  });
+  // Rate limiting — the limiter itself stands down in test mode (ENABLE_TEST_ROUTES=1)
+  app.use(generalLimiter);
 
   // Serve uploaded photos. Allow cross-origin loading so the frontend can display
   // images even when running on a different host/port (common in dev).

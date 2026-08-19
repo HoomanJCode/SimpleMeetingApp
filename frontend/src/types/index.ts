@@ -12,6 +12,12 @@ export interface MeetingPhoto {
   createdAt: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Meeting {
   id: string;
   hostId: string;
@@ -23,6 +29,7 @@ export interface Meeting {
   status: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
   coverPhotoUrl: string | null;
   photos?: MeetingPhoto[];
+  tags?: Tag[];
   createdAt: string;
   updatedAt: string;
   hostName?: string;

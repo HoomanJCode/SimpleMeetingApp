@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { useMeetingList } from '../hooks/useMeetings';
+import { useMeetingList, useTags } from '../hooks/useMeetings';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { MeetingList } from '../components/meeting/MeetingList';
 
@@ -10,10 +10,19 @@ export function HomePage() {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const { meetings, pagination, isLoading, error } = useMeetingList({ page, search });
+  const [tagId, setTagId] = useState<string | null>(null);
+  const { tags } = useTags();
+  const params: Record<string, string | number> = { page, search };
+  if (tagId) params.tagId = tagId;
+  const { meetings, pagination, isLoading, error } = useMeetingList(params);
 
   const handleSearch = useCallback((query: string) => {
     setSearch(query);
+    setPage(1);
+  }, []);
+
+  const handleTagFilter = useCallback((next: string | null) => {
+    setTagId(next);
     setPage(1);
   }, []);
 
@@ -49,6 +58,9 @@ export function HomePage() {
         currentPage={pagination?.page ?? 1}
         onPageChange={setPage}
         onSearch={handleSearch}
+        tags={tags}
+        activeTagId={tagId}
+        onTagFilter={handleTagFilter}
       />
     </div>
   );

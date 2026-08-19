@@ -145,6 +145,13 @@ export function MeetingCalendar({ year, month, meetings, onMonthChange }: Meetin
                     className="block text-xs px-2 py-1 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-900/50 truncate transition-colors"
                     title={meeting.title}
                   >
+                    {meeting.tags && meeting.tags.length > 0 && (
+                      <span
+                        className="inline-block w-2 h-2 rounded-full mr-1 align-middle"
+                        style={{ backgroundColor: meeting.tags[0].color }}
+                        aria-hidden="true"
+                      />
+                    )}
                     <span className="font-medium">
                       {new Date(meeting.dateTime).toLocaleTimeString('en-US', {
                         hour: '2-digit',

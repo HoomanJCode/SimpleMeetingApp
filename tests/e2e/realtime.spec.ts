@@ -44,7 +44,8 @@ async function aliceCreatesMeeting(page: Page, title: string): Promise<string> {
   await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
   await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
   await page.getByRole('button', { name: 'Create Meeting' }).click();
-  await page.waitForURL(/\/meetings\/[\w-]+/);
+  // (?!new) so the regex can't match /meetings/new before navigation completes.
+  await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
   return page.url();
 }
 
@@ -90,7 +91,8 @@ test.describe('Realtime WebSocket Updates', () => {
       await alice.page.waitForURL(/\/meetings\/[\w-]+\/edit/);
       await alice.page.getByLabel('Title *').fill('Updated Title');
       await alice.page.getByRole('button', { name: 'Save Changes' }).click();
-      await alice.page.waitForURL(/\/meetings\/[\w-]+/);
+      // [^/]+$ ensures we left the /edit page (the loose regex matches /edit too).
+      await alice.page.waitForURL(/\/meetings\/[^/]+$/);
       await expect(alice.page.getByRole('heading', { name: 'Updated Title' })).toBeVisible();
 
       // Bob should see the updated title via WebSocket
@@ -98,22 +100,30 @@ test.describe('Realtime WebSocket Updates', () => {
     });
   });
 
-  test('when host deletes meeting, viewers are redirected to home', async ({ browser }) => {
+  test('when host cancels meeting, viewers see the cancelled status in real time', async ({ browser }) => {
+    // Meetings are never permanently deleted (backend has no DELETE route);
+    // hosts cancel them instead, which broadcasts meeting:cancelled.
     await withTwoUsers(browser, async (alice, bob) => {
       await loginAs(alice.page, 'alice');
-      const meetingUrl = await aliceCreatesMeeting(alice.page, 'Delete Test Meeting');
+      const meetingUrl = await aliceCreatesMeeting(alice.page, 'Cancel Test Meeting');
 
       await loginAs(bob.page, 'bob');
       await bob.page.goto(meetingUrl);
       await bob.page.waitForURL(`**/meetings/${meetingIdFromUrl(meetingUrl)}`);
 
-      // Alice deletes the meeting
-      await alice.page.getByRole('button', { name: 'Delete' }).click();
-      await alice.page.getByRole('button', { name: 'Delete' }).click();
-      await alice.page.waitForURL(`${FRONTEND_URL}/`);
+      // Ensure Bob's socket is connected and subscribed to the meeting room
+      // before Alice acts; otherwise the meeting:cancelled broadcast can race
+      // past Bob's room join and be missed.
+      await expect(bob.page.getByText(/live|connected/i)).toBeVisible({ timeout: 10_000 });
 
-      // Bob should be redirected to home via meeting:deleted event
-      await bob.page.waitForURL(`${FRONTEND_URL}/`, { timeout: 15_000 });
+      // Alice cancels the meeting
+      await alice.page.getByRole('button', { name: 'Cancel Meeting' }).click();
+      await alice.page.getByRole('dialog').getByRole('button', { name: 'Cancel Meeting' }).click();
+
+      // Bob should see the cancelled status via the meeting:cancelled event
+      await expect(bob.page.getByText('Cancelled', { exact: true })).toBeVisible({ timeout: 15_000 });
+      // The join button disappears once the meeting is cancelled.
+      await expect(bob.page.getByRole('button', { name: /join meeting/i })).not.toBeVisible();
     });
   });
 });

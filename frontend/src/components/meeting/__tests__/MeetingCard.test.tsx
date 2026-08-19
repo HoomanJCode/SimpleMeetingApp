@@ -70,4 +70,28 @@ describe('MeetingCard', () => {
     const count = screen.getByText('18/20');
     expect(count).toHaveClass('text-orange-600');
   });
+
+  it('shows tag chips on the card', () => {
+    renderWithRouter(
+      createMeeting({
+        tags: [
+          { id: 'tag-tech', name: 'Tech Talk', color: '#3b82f6' },
+          { id: 'tag-online', name: 'Online', color: '#8b5cf6' },
+        ],
+      })
+    );
+
+    expect(screen.getByText('Tech Talk')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  it('limits tag chips to 3 and shows an overflow count', () => {
+    const makeTag = (i: number) => ({ id: `tag-${i}`, name: `Tag ${i}`, color: '#3b82f6' });
+    renderWithRouter(createMeeting({ tags: [makeTag(1), makeTag(2), makeTag(3), makeTag(4)] }));
+
+    expect(screen.getByText('Tag 1')).toBeInTheDocument();
+    expect(screen.getByText('Tag 3')).toBeInTheDocument();
+    expect(screen.queryByText('Tag 4')).not.toBeInTheDocument();
+    expect(screen.getByText('+1')).toBeInTheDocument();
+  });
 });

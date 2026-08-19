@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MeetingForm } from '../components/meeting/MeetingForm';
-import { useMeeting, useUpdateMeeting, useCancelMeeting, useUploadMeetingPhoto } from '../hooks/useMeetings';
+import { useMeeting, useUpdateMeeting, useCancelMeeting, useUploadMeetingPhoto, useTags } from '../hooks/useMeetings';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Spinner } from '../components/ui/Spinner';
@@ -16,6 +16,7 @@ export default function EditMeetingPage() {
   const navigate = useNavigate();
   const { meeting, isLoading, error: loadError } = useMeeting(id);
   const { update, isLoading: isSaving } = useUpdateMeeting();
+  const { tags } = useTags();
   const { upload } = useUploadMeetingPhoto();
   const { cancel, isLoading: isCancelling } = useCancelMeeting();
   const { toast } = useToast();
@@ -110,6 +111,8 @@ export default function EditMeetingPage() {
         submitLabel="Save Changes"
         coverPhotoUrl={meeting.coverPhotoUrl}
         onDirtyChange={setIsDirty}
+        tags={tags}
+        initialTagIds={meeting.tags?.map((t) => t.id) ?? []}
       />
 
       <NavigationBlocker when={isDirty && !submittedRef.current} />

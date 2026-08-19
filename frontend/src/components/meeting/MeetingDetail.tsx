@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
 import { Badge, statusBadgeVariant } from '../ui/Badge';
+import { TagChip } from '../ui/TagChip';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -103,6 +104,13 @@ export function MeetingDetail({
             <ConnectionStatus state={connectionState} />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{meeting.title}</h1>
+          {meeting.tags && meeting.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {meeting.tags.map((tag) => (
+                <TagChip key={tag.id} tag={tag} size="md" />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

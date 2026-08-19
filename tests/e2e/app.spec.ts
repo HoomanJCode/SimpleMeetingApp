@@ -18,9 +18,11 @@ test.describe('Home Page', () => {
 });
 
 test.describe('Authentication', () => {
-  test('shows Sign in with Google button when not authenticated', async ({ page }) => {
+  test('shows the sign-in button when not authenticated', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Sign in with Google')).toBeVisible();
+    // Test mode uses email/password auth (AUTH_METHOD=userpass); exact match
+    // because the hero paragraph also contains "Sign in to create and join".
+    await expect(page.getByText('Sign In', { exact: true })).toBeVisible();
   });
 
   test('protected routes redirect to home', async ({ page }) => {

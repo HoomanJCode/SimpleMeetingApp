@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
 import { Badge, statusBadgeVariant } from '../ui/Badge';
+import { TagChip } from '../ui/TagChip';
 import type { Meeting } from '../../types';
 
 interface MeetingCardProps {
@@ -44,6 +45,17 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
         {meeting.title}
       </h3>
+
+      {meeting.tags && meeting.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {meeting.tags.slice(0, 3).map((tag) => (
+            <TagChip key={tag.id} tag={tag} />
+          ))}
+          {meeting.tags.length > 3 && (
+            <span className="text-xs text-gray-400 self-center px-1">+{meeting.tags.length - 3}</span>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 mb-2">
         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

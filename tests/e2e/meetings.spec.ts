@@ -25,12 +25,13 @@ test.describe('Meeting CRUD', () => {
     await page.getByRole('button', { name: 'Create Meeting' }).click();
 
     // After creation the app navigates to the meeting detail page.
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    // (?!new) so the regex can't match /meetings/new before navigation completes.
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     await expect(page.getByRole('heading', { name: validMeeting.title })).toBeVisible();
     await expect(page.getByText(validMeeting.location)).toBeVisible();
     await expect(page.getByText('Hosted by')).toBeVisible();
-    await expect(page.getByText('Alice Host')).toBeVisible();
+    await expect(page.getByText('Alice Host').first()).toBeVisible();
   });
 
   test('creating a meeting with blank required fields shows validation errors', async ({ page }) => {
@@ -59,8 +60,9 @@ test.describe('Meeting CRUD', () => {
 
     await page.getByRole('button', { name: 'Create Meeting' }).click();
 
-    // The backend rejects capacity < 2; the UI surfaces the error in the form.
-    await expect(page.getByText(/capacity/i)).toBeVisible();
+    // The backend rejects capacity < 2; the UI shows the error both inline
+    // and as a toast, so pin the first match.
+    await expect(page.getByText(/invalid request data/i).first()).toBeVisible();
   });
 
   test('meeting appears on the home page list and can be opened', async ({ page }) => {
@@ -74,7 +76,7 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     const detailUrl = page.url();
 
@@ -97,7 +99,7 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     await page.getByRole('link', { name: 'Edit' }).click();
     await page.waitForURL(/\/meetings\/[\w-]+\/edit/);
@@ -106,7 +108,8 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Title *').fill(updatedTitle);
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    // [^/]+$ ensures we left the /edit page (the loose regex matches /edit too).
+    await page.waitForURL(/\/meetings\/[^/]+$/);
     await expect(page.getByRole('heading', { name: updatedTitle })).toBeVisible();
   });
 
@@ -121,7 +124,7 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     const detailUrl = page.url();
 
@@ -136,8 +139,9 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Title *').fill(`${validMeeting.title} (Bob's attempt)`);
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    // The backend returns 403 Forbidden; the UI should show an error.
-    await expect(page.getByText(/forbidden|not authorized|cannot update|only the host/i)).toBeVisible();
+    // The backend returns 403 Forbidden; the UI shows the error both inline
+    // and as a toast, so pin the first match.
+    await expect(page.getByText(/forbidden|not authorized|cannot update|only the host/i).first()).toBeVisible();
   });
 
   test('host can cancel their own meeting', async ({ page }) => {
@@ -150,7 +154,7 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     await page.getByRole('button', { name: 'Cancel Meeting' }).click();
 
@@ -158,7 +162,9 @@ test.describe('Meeting CRUD', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Cancel Meeting' }).click();
 
     // The meeting remains visible but its status changes to Cancelled.
-    await expect(page.getByText('Cancelled')).toBeVisible();
+    // Exact match: the success toast text "Meeting cancelled." also contains
+    // the word "cancelled" and would make this locator ambiguous.
+    await expect(page.getByText('Cancelled', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: validMeeting.title })).toBeVisible();
   });
 
@@ -173,11 +179,12 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     // Upload a gallery photo through the hidden file input.
+    // Path is relative to the tests/ cwd where Playwright runs.
     const fileInput = page.getByLabel('Add photo', { exact: true });
-    await fileInput.setInputFiles('tests/fixtures/test-image.png');
+    await fileInput.setInputFiles('fixtures/test-image.png');
 
     // Wait for the image to render in the Photos section.
     await expect(page.locator('img[alt=""]').first()).toBeVisible({ timeout: 10_000 });
@@ -196,7 +203,7 @@ test.describe('Meeting CRUD', () => {
       await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
       await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
       await page.getByRole('button', { name: 'Create Meeting' }).click();
-      await page.waitForURL(/\/meetings\/[\w-]+/);
+      await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
     }
 
     await page.goto(`${FRONTEND_URL}/`);
@@ -216,7 +223,7 @@ test.describe('Meeting CRUD', () => {
     await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
     await page.getByLabel('Capacity *').fill(String(validMeeting.capacity));
     await page.getByRole('button', { name: 'Create Meeting' }).click();
-    await page.waitForURL(/\/meetings\/[\w-]+/);
+    await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
 
     await page.goto(`${FRONTEND_URL}/my-meetings`);
     await page.waitForURL(`${FRONTEND_URL}/my-meetings`);
