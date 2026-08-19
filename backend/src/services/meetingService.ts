@@ -98,8 +98,9 @@ function attachTagsToMeetings(meetings: Meeting[]): Meeting[] {
 }
 
 /**
- * Replaces the tag assignments for a meeting. Unknown tag IDs are ignored
- * (the FK constraint silently skips them via INSERT OR IGNORE).
+ * Replaces the tag assignments for a meeting. Unknown tag IDs are filtered
+ * out before inserting — SQLite's OR IGNORE does NOT suppress foreign-key
+ * violations, so a non-existent tag would otherwise raise a 500 error.
  */
 function setMeetingTags(meetingId: string, tagIds: string[]): void {
   const db = getDb();
@@ -108,8 +109,16 @@ function setMeetingTags(meetingId: string, tagIds: string[]): void {
 
   db.transaction(() => {
     deleteStmt.run(meetingId);
-    for (const tagId of tagIds) {
-      insertStmt.run(meetingId, tagId);
+    if (tagIds.length === 0) return;
+
+    // Keep only tag IDs that actually exist in the tags table.
+    const placeholders = tagIds.map(() => '?').join(',');
+    const validRows = db
+      .prepare(`SELECT id FROM tags WHERE id IN (${placeholders})`)
+      .all(...tagIds) as { id: string }[];
+
+    for (const { id } of validRows) {
+      insertStmt.run(meetingId, id);
     }
   })();
 }

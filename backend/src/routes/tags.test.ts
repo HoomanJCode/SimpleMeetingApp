@@ -145,5 +145,20 @@ describe('Tags API', () => {
 
       expect(updated.body.tags).toHaveLength(0);
     });
+
+    it('ignores unknown tag IDs instead of failing', async () => {
+      const socialId = await tagIdByName('Social', app);
+
+      // Mix a non-existent tag ID with a valid one; the unknown ID must be
+      // silently skipped (regression: it previously caused a 500 FK error).
+      const res = await request(app)
+        .post('/api/meetings')
+        .set('Authorization', `Bearer ${hostToken}`)
+        .send({ ...validMeeting(), tagIds: ['tag-does-not-exist', socialId] })
+        .expect(201);
+
+      const names = (res.body.tags as Tag[]).map((t) => t.name);
+      expect(names).toEqual(['Social']);
+    });
   });
 });
