@@ -83,7 +83,7 @@ export function MeetingTimeline({ meetings, isLoading, error }: MeetingTimelineP
     );
   }
 
-  if (items.length === 0) {
+  if (meetings.length === 0) {
     return (
       <EmptyState
         title="No meetings to show"
