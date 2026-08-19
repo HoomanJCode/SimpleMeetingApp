@@ -46,8 +46,7 @@ IrMeetingApp/
 │   ├── prod.{ps1,sh} # Real mode (Google OAuth via backend/.env). Auto-opens browser.
 │   ├── test-env.cjs  # Kept for tests/playwright.config.ts via require()
 │   └── test-env.{ps1,sh}  # Inlined test overlay, dot-sourced by dev.{ps1,sh}.
-├── documents/        # Architecture & design docs
-└── todos/            # Implementation task lists
+└── documents/        # Architecture & design docs
 ```
 
 ## Quick Start
@@ -198,9 +197,10 @@ through the dev-only `/api/test/login` endpoint.
 | Spec                  | Tests                                                              |
 |-----------------------|--------------------------------------------------------------------|
 | `auth.spec.ts`        | Unauthenticated redirect, login via OAuth callback, sign out       |
-| `meetings.spec.ts`    | CRUD, validation, search, host-only edit, delete, My Meetings page |
+| `meetings.spec.ts`    | CRUD, validation, search, host-only edit, cancel, My Meetings page |
 | `participants.spec.ts`| Join, leave, full capacity, duplicate join (409), multi-user count |
-| `realtime.spec.ts`    | Connection indicator, real-time count/title updates, delete redirect|
+| `realtime.spec.ts`    | Connection indicator, real-time count/title updates, cancel broadcast |
+| `tags-timeline.spec.ts`| Create/filter meetings by tag, timeline rendering, dark mode       |
 
 ## Scripts Reference
 
@@ -257,13 +257,6 @@ See [Backend README](backend/README.md) for the full API reference and WebSocket
 - [Authentication Flow](documents/authentication.md)
 - [Real-Time Communication](documents/real-time-communication.md)
 - [Project Structure](documents/project-structure.md)
-
-## Implementation Plan
-
-- [Master Todo](todos/master-todo-passed.md)
-- [Backend Todo](todos/backend-todo-passed.md)
-- [Frontend Todo](todos/frontend-todo-passed.md)
-- [Testing Todo](todos/testing-todo-passed.md)
 
 ## License
 
