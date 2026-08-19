@@ -75,6 +75,17 @@ describe('MeetingTimeline', () => {
     expect(link).toHaveAttribute('href', '/meetings/meeting-abc');
   });
 
+  it('colors the status dot by meeting status', () => {
+    renderTimeline([
+      createMeeting({ id: 'upcoming', title: 'Upcoming', status: 'upcoming' }),
+      createMeeting({ id: 'cancelled', title: 'Cancelled', status: 'cancelled', dateTime: '2027-01-02T18:00:00Z' }),
+    ]);
+
+    // Upcoming → primary dot; cancelled → red dot (both rendered as dots on the rail)
+    expect(document.querySelector('.bg-primary-500')).not.toBeNull();
+    expect(document.querySelector('.bg-red-400')).not.toBeNull();
+  });
+
   it('shows the error message when loading fails', () => {
     renderTimeline([], false, 'Failed to load meetings');
     expect(screen.getByText('Failed to load meetings')).toBeInTheDocument();
