@@ -15,6 +15,20 @@ A real-time Meetup-like web application for creating and joining tech meetings. 
 | Frontend Tests | Vitest + Testing Library (52+ tests)         |
 | E2E Tests      | Playwright (Chromium)                        |
 
+## Screenshots
+
+Real pages captured from a local test-mode run (demo data seeded through the dev-only test API):
+
+| | |
+|---|---|
+| **Home** — meeting list with search & tag filters | ![Home page](documents/screenshots/home.png) |
+| **Home (dark mode)** | ![Home page in dark mode](documents/screenshots/home-dark.png) |
+| **Meeting detail** — cover photo, gallery, tags & participants | ![Meeting detail](documents/screenshots/meeting-detail.png) |
+| **Create meeting** — pre-filled form with tag picker | ![Create meeting form](documents/screenshots/create-meeting.png) |
+| **Calendar view** | ![Calendar view](documents/screenshots/calendar.png) |
+| **Event timeline** — upcoming / ongoing / ended / cancelled | ![Event timeline](documents/screenshots/timeline.png) |
+| **My Meetings** — hosting & attending tabs | ![My Meetings](documents/screenshots/my-meetings.png) |
+
 ## Project Structure
 
 ```
