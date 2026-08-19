@@ -4,7 +4,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 1. Replace Delete Meeting with Cancel Meeting
+## 1. Replace Delete Meeting with Cancel Meeting ✅ Done (320a5a7)
 
 **Request:** Users should not be able to permanently delete meetings. Instead, hosts should be able to cancel a meeting, which sets its status to `cancelled` and keeps the meeting visible in the system.
 
@@ -59,7 +59,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 3. Calendar View for Meetings
+## 3. Calendar View for Meetings ✅ Done (9e098e4)
 
 **Request:** A calendar page that displays meetings as events on a visual calendar, so users can see their schedule at a glance.
 
