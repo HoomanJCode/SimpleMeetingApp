@@ -21,7 +21,8 @@ async function createMeeting(page: any, title: string, capacity: number): Promis
   await page.getByLabel('Date & Time *').fill(formatDateTimeLocal(futureDateTime()));
   await page.getByLabel('Capacity *').fill(String(capacity));
   await page.getByRole('button', { name: 'Create Meeting' }).click();
-  await page.waitForURL(/\/meetings\/[\w-]+/);
+  // (?!new) so the regex can't match /meetings/new before navigation completes.
+  await page.waitForURL(/\/meetings\/(?!new)[\w-]+/);
   return page.url();
 }
 
@@ -99,9 +100,9 @@ test.describe('Participant Join / Leave', () => {
     await loginAs(page, 'alice');
     const detailUrl = await createMeeting(page, 'Host Leave Test', validMeeting.capacity);
 
-    // Alice is host — she should NOT see Leave button
-    // Host sees Delete button instead
-    await expect(page.getByRole('button', { name: /delete meeting/i })).toBeVisible();
+    // Alice is host — she should NOT see the Leave button.
+    // Instead she gets host-only controls (Edit / Cancel Meeting).
+    await expect(page.getByRole('button', { name: /cancel meeting/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /leave/i })).not.toBeVisible();
   });
 

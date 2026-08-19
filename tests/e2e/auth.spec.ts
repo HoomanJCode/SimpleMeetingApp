@@ -2,10 +2,13 @@ import { test, expect } from '../helpers/setup';
 import { loginAs } from '../helpers/auth';
 
 test.describe('Unauthenticated state', () => {
-  test('home page shows Sign in with Google when logged out', async ({ page }) => {
+  test('home page shows the sign-in button when logged out', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Sign in with Google')).toBeVisible();
+    // Test mode uses email/password auth (AUTH_METHOD=userpass), so the
+    // header login button reads "Sign In" (exact: the hero paragraph also
+    // contains "Sign in to create and join meetings").
+    await expect(page.getByText('Sign In', { exact: true })).toBeVisible();
     await expect(page.getByText('Sign Out')).not.toBeVisible();
   });
 
@@ -18,7 +21,7 @@ test.describe('Unauthenticated state', () => {
     await page.goto('/auth/callback?token=fake&refreshToken=fake');
     await page.waitForURL('/');
 
-    await expect(page.getByText('Sign in with Google')).toBeVisible();
+    await expect(page.getByText('Sign In', { exact: true })).toBeVisible();
   });
 });
 
@@ -28,7 +31,7 @@ test.describe('Authentication via loginAs', () => {
 
     await expect(page.getByText('Alice Host', { exact: true })).toBeVisible();
     await expect(page.getByText('Sign Out')).toBeVisible();
-    await expect(page.getByText('Sign in with Google')).not.toBeVisible();
+    await expect(page.getByText('Sign In', { exact: true })).not.toBeVisible();
   });
 
   test('renders the Create Meeting CTA when signed in', async ({ page }) => {
@@ -62,7 +65,7 @@ test.describe('Sign out', () => {
     await page.getByRole('button', { name: 'Sign Out' }).click();
     await expect(page).toHaveURL(/\/$/);
 
-    await expect(page.getByText('Sign in with Google')).toBeVisible();
+    await expect(page.getByText('Sign In', { exact: true })).toBeVisible();
     await expect(page.getByText('Sign Out')).not.toBeVisible();
   });
 });
