@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MeetingForm } from '../components/meeting/MeetingForm';
-import { useCreateMeeting, useUpdateMeeting, useUploadMeetingPhoto } from '../hooks/useMeetings';
+import { useCreateMeeting, useUpdateMeeting, useUploadMeetingPhoto, useTags } from '../hooks/useMeetings';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBeforeUnload } from '../hooks/useBeforeUnload';
 import { useToast } from '../components/ui/Toast';
@@ -14,6 +14,7 @@ export function CreateMeetingPage() {
   const { create, isLoading, error } = useCreateMeeting();
   const { update } = useUpdateMeeting();
   const { upload } = useUploadMeetingPhoto();
+  const { tags } = useTags();
   const { toast } = useToast();
   const [isDirty, setIsDirty] = useState(false);
   const submittedRef = useRef(false); // set to true after successful create; blocks NavigationBlocker
@@ -66,6 +67,7 @@ export function CreateMeetingPage() {
         isLoading={isLoading}
         error={error}
         onDirtyChange={setIsDirty}
+        tags={tags}
       />
       <NavigationBlocker when={isDirty && !submittedRef.current} />
     </div>

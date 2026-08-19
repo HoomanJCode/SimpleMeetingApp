@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { MeetingCard } from './MeetingCard';
 import { SkeletonList } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
-import type { Meeting } from '../../types';
+import { TagChip } from '../ui/TagChip';
+import type { Meeting, Tag } from '../../types';
 
 interface MeetingListProps {
   meetings: Meeting[];
@@ -12,6 +13,9 @@ interface MeetingListProps {
   currentPage?: number;
   onPageChange?: (page: number) => void;
   onSearch?: (query: string) => void;
+  tags?: Tag[];
+  activeTagId?: string | null;
+  onTagFilter?: (tagId: string | null) => void;
 }
 
 export function MeetingList({
@@ -22,6 +26,9 @@ export function MeetingList({
   currentPage = 1,
   onPageChange,
   onSearch,
+  tags = [],
+  activeTagId = null,
+  onTagFilter,
 }: MeetingListProps) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -38,6 +45,21 @@ export function MeetingList({
 
   return (
     <div className="space-y-6">
+      {/* Tag filter */}
+      {tags.length > 0 && onTagFilter && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Filter:</span>
+          {tags.map((tag) => (
+            <TagChip
+              key={tag.id}
+              tag={tag}
+              selected={activeTagId === tag.id}
+              onClick={() => onTagFilter(activeTagId === tag.id ? null : tag.id)}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Search bar */}
       {onSearch && (
         <div className="relative max-w-md">

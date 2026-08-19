@@ -8,13 +8,14 @@ import {
   joinMeeting as apiJoinMeeting,
   leaveMeeting as apiLeaveMeeting,
   getMyMeetings,
+  getTags,
   uploadMeetingPhoto as apiUploadMeetingPhoto,
   deleteMeetingPhoto as apiDeleteMeetingPhoto,
   type CreateMeetingInput,
   type UpdateMeetingInput,
   type MeetingListResponse,
 } from '../api/meetings';
-import type { Meeting, MeetingResponse } from '../types';
+import type { Meeting, MeetingResponse, Tag } from '../types';
 
 // ---- Query hooks ----
 
@@ -34,7 +35,7 @@ export function useMeetingList(params?: Record<string, string | number>) {
     } finally {
       setIsLoading(false);
     }
-  }, [params?.page, params?.search, params?.status, params?.fromDate, params?.toDate, params?.limit]);
+  }, [params?.page, params?.search, params?.status, params?.fromDate, params?.toDate, params?.tagId, params?.limit]);
 
   useEffect(() => {
     fetch();
@@ -60,6 +61,21 @@ export function useMeeting(id: string | undefined, userId?: string | null) {
   const setMeeting = useCallback((meeting: MeetingResponse) => setData(meeting), []);
 
   return { meeting: data, isLoading, error, setMeeting };
+}
+
+export function useTags() {
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getTags()
+      .then((result) => setTags(result.tags))
+      .catch((err) => setError(err.message || 'Failed to load tags'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  return { tags, isLoading, error };
 }
 
 export function useMyMeetings() {

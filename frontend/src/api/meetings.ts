@@ -1,5 +1,5 @@
 import { api, getAccessToken } from './client';
-import type { Meeting, MeetingResponse, MeetingPhoto } from '../types';
+import type { Meeting, MeetingResponse, MeetingPhoto, Tag } from '../types';
 
 export interface CreateMeetingInput {
   title: string;
@@ -8,6 +8,7 @@ export interface CreateMeetingInput {
   location: string;
   capacity: number;
   coverPhotoUrl?: string | null;
+  tagIds?: string[];
 }
 
 export interface UpdateMeetingInput {
@@ -18,6 +19,7 @@ export interface UpdateMeetingInput {
   capacity?: number;
   status?: string;
   coverPhotoUrl?: string | null;
+  tagIds?: string[];
 }
 
 export interface MeetingListResponse {
@@ -28,6 +30,10 @@ export interface MeetingListResponse {
     total: number;
     totalPages: number;
   };
+}
+
+export function getTags(): Promise<{ tags: Tag[] }> {
+  return api.get<{ tags: Tag[] }>('/tags');
 }
 
 export function getMeetings(params?: Record<string, string | number>): Promise<MeetingListResponse> {

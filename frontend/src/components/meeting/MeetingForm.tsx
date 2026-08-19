@@ -1,5 +1,7 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import type { CreateMeetingInput } from '../../api/meetings';
+import type { Tag } from '../../types';
+import { TagChip } from '../ui/TagChip';
 
 export interface MeetingFormSubmitData extends CreateMeetingInput {
   coverPhotoFile?: File | null;
@@ -14,6 +16,8 @@ interface MeetingFormProps {
   submitLabel?: string;
   onDirtyChange?: (dirty: boolean) => void;
   coverPhotoUrl?: string | null;
+  tags?: Tag[];
+  initialTagIds?: string[];
 }
 
 export function MeetingForm({
@@ -24,6 +28,8 @@ export function MeetingForm({
   submitLabel = 'Create Meeting',
   onDirtyChange,
   coverPhotoUrl,
+  tags = [],
+  initialTagIds = [],
 }: MeetingFormProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -33,6 +39,7 @@ export function MeetingForm({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef(false);
 
@@ -63,7 +70,9 @@ export function MeetingForm({
     location !== (initialData?.location || '') ||
     capacity !== (initialData?.capacity || 10) ||
     coverFile !== null ||
-    (coverPhotoUrl !== undefined && coverRemoved);
+    (coverPhotoUrl !== undefined && coverRemoved) ||
+    selectedTagIds.length !== initialTagIds.length ||
+    selectedTagIds.some((id) => !initialTagIds.includes(id));
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -74,6 +83,13 @@ export function MeetingForm({
     const file = e.target.files?.[0] ?? null;
     setCoverFile(file);
     setCoverRemoved(false);
+  };
+
+  const toggleTag = (tagId: string) => {
+    // Toggle a tag chip on/off in the selection set.
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    );
   };
 
   const handleClear = () => {
@@ -100,6 +116,7 @@ export function MeetingForm({
         capacity,
         coverPhotoFile: coverFile,
         coverPhotoRemoved: coverRemoved,
+        tagIds: selectedTagIds,
       });
     } finally {
       isSubmittingRef.current = false;
@@ -183,6 +200,22 @@ export function MeetingForm({
           placeholder="Tehran Coworking Hub"
         />
       </div>
+
+      {tags.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tags</label>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <TagChip
+                key={tag.id}
+                tag={tag}
+                selected={selectedTagIds.includes(tag.id)}
+                onClick={() => toggleTag(tag.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Cover Photo</label>
