@@ -10,6 +10,7 @@ export const createMeetingSchema = z.object({
   location: z.string().min(2, 'Location must be at least 2 characters').max(300, 'Location must be under 300 characters'),
   capacity: z.number().int('Capacity must be a whole number').min(2, 'Minimum capacity is 2').max(10000, 'Maximum capacity is 10000'),
   coverPhotoUrl: z.string().url().nullable().optional(),
+  tagIds: z.array(z.string()).max(10, 'Maximum 10 tags per meeting').optional(),
 });
 
 export const updateMeetingSchema = z.object({
@@ -23,6 +24,7 @@ export const updateMeetingSchema = z.object({
   capacity: z.number().int().min(2).max(10000).optional(),
   status: z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
   coverPhotoUrl: z.string().url().nullable().optional(),
+  tagIds: z.array(z.string()).max(10, 'Maximum 10 tags per meeting').optional(),
 });
 
 export const meetingQuerySchema = z.object({
@@ -32,6 +34,7 @@ export const meetingQuerySchema = z.object({
   status: z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
+  tagId: z.string().optional(),
 });
 
 export type CreateMeetingInput = z.infer<typeof createMeetingSchema>;

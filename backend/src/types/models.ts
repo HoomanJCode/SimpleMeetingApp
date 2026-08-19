@@ -30,6 +30,7 @@ export interface Meeting {
   participantCount?: number;
   isJoined?: boolean;
   photos?: MeetingPhoto[];
+  tags?: Tag[];
 }
 
 export interface MeetingPhoto {
@@ -37,6 +38,12 @@ export interface MeetingPhoto {
   meetingId: string;
   url: string;
   createdAt: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface Participant {
@@ -64,6 +71,7 @@ export interface MeetingFilters {
   status?: 'upcoming' | 'ongoing' | 'ended' | 'cancelled';
   fromDate?: string;
   toDate?: string;
+  tagId?: string;
 }
 
 export interface PaginatedResult<T> {

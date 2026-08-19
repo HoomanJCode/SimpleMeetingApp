@@ -1,5 +1,5 @@
 import { getDb } from '../db/connection';
-import { Meeting, MeetingFilters, PaginatedResult, MeetingPhoto } from '../types/models';
+import { Meeting, MeetingFilters, PaginatedResult, MeetingPhoto, Tag } from '../types/models';
 import { CreateMeetingInput, UpdateMeetingInput } from './meetingSchemas';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
 import { logger } from '../utils/logger';
@@ -61,6 +61,67 @@ function mapDbMeeting(row: DbMeetingRow, userId?: string, isJoined?: boolean): M
   };
 }
 
+/**
+ * Returns a map of meetingId -> tags for the given meeting IDs.
+ * Tags are ordered alphabetically by name.
+ */
+function getTagsForMeetingIds(meetingIds: string[]): Map<string, Tag[]> {
+  const db = getDb();
+  const map = new Map<string, Tag[]>();
+  if (meetingIds.length === 0) return map;
+
+  const placeholders = meetingIds.map(() => '?').join(',');
+  const rows = db
+    .prepare(`
+      SELECT mt.meeting_id, t.id, t.name, t.color
+      FROM meeting_tags mt
+      JOIN tags t ON t.id = mt.tag_id
+      WHERE mt.meeting_id IN (${placeholders})
+      ORDER BY t.name ASC
+    `)
+    .all(...meetingIds) as { meeting_id: string; id: string; name: string; color: string }[];
+
+  for (const r of rows) {
+    const list = map.get(r.meeting_id) ?? [];
+    list.push({ id: r.id, name: r.name, color: r.color });
+    map.set(r.meeting_id, list);
+  }
+  return map;
+}
+
+/**
+ * Attaches the `tags` array to each meeting. Meetings without tags get an empty array.
+ */
+function attachTagsToMeetings(meetings: Meeting[]): Meeting[] {
+  const tagsByMeeting = getTagsForMeetingIds(meetings.map((m) => m.id));
+  return meetings.map((m) => ({ ...m, tags: tagsByMeeting.get(m.id) ?? [] }));
+}
+
+/**
+ * Replaces the tag assignments for a meeting. Unknown tag IDs are ignored
+ * (the FK constraint silently skips them via INSERT OR IGNORE).
+ */
+function setMeetingTags(meetingId: string, tagIds: string[]): void {
+  const db = getDb();
+  const deleteStmt = db.prepare('DELETE FROM meeting_tags WHERE meeting_id = ?');
+  const insertStmt = db.prepare('INSERT OR IGNORE INTO meeting_tags (meeting_id, tag_id) VALUES (?, ?)');
+
+  db.transaction(() => {
+    deleteStmt.run(meetingId);
+    for (const tagId of tagIds) {
+      insertStmt.run(meetingId, tagId);
+    }
+  })();
+}
+
+/**
+ * Lists all available (predefined) tags.
+ */
+export function getAllTags(): Tag[] {
+  const db = getDb();
+  return db.prepare('SELECT id, name, color FROM tags ORDER BY name ASC').all() as Tag[];
+}
+
 // ---- Public API ----
 
 /**
@@ -91,6 +152,11 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
 
   transaction();
 
+  // Assign tags (if any) after the meeting row exists.
+  if (data.tagIds && data.tagIds.length > 0) {
+    setMeetingTags(id, data.tagIds);
+  }
+
   logger.info({ meetingId: id, hostId }, 'Meeting created');
 
   const meeting: Meeting = {
@@ -109,6 +175,7 @@ export function createMeeting(data: CreateMeetingInput, hostId: string): Meeting
     hostAvatarUrl: host?.avatar_url ?? null,
     participantCount: 1,
     isJoined: true,
+    tags: getTagsForMeetingIds([id]).get(id) ?? [],
   };
 
   // Broadcast to all connected clients
@@ -152,6 +219,11 @@ export function getMeetings(filters: MeetingFilters, userId?: string): Paginated
     params.push(filters.toDate);
   }
 
+  if (filters.tagId) {
+    whereClause += ' AND m.id IN (SELECT meeting_id FROM meeting_tags WHERE tag_id = ?)';
+    params.push(filters.tagId);
+  }
+
   // Count total
   const countRow = db
     .prepare(`SELECT COUNT(*) as total FROM meetings m ${whereClause}`)
@@ -174,7 +246,7 @@ export function getMeetings(filters: MeetingFilters, userId?: string): Paginated
     .all(...params, limit, offset) as DbMeetingRow[];
 
   return {
-    data: rows.map((r) => mapDbMeeting(r)),
+    data: attachTagsToMeetings(rows.map((r) => mapDbMeeting(r))),
     pagination: {
       page,
       limit,
@@ -215,7 +287,7 @@ export function getMeetingById(id: string, userId?: string): Meeting {
     isJoined = !!participant;
   }
 
-  return mapDbMeeting(row, userId, isJoined);
+  return attachTagsToMeetings([mapDbMeeting(row, userId, isJoined)])[0];
 }
 
 /**
@@ -276,14 +348,20 @@ export function updateMeeting(id: string, userId: string, data: UpdateMeetingInp
     params.push(data.coverPhotoUrl);
   }
 
-  if (updates.length === 0) {
+  if (updates.length === 0 && data.tagIds === undefined) {
     return getMeetingById(id, userId);
   }
 
-  updates.push("updated_at = datetime('now')");
-  params.push(id);
+  if (updates.length > 0) {
+    updates.push("updated_at = datetime('now')");
+    params.push(id);
+    db.prepare(`UPDATE meetings SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  }
 
-  db.prepare(`UPDATE meetings SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  // Replace tag assignments when tagIds is explicitly provided.
+  if (data.tagIds !== undefined) {
+    setMeetingTags(id, data.tagIds);
+  }
 
   logger.info({ meetingId: id, userId }, 'Meeting updated');
 
@@ -553,7 +631,7 @@ export function getUserMeetings(userId: string) {
     .all(userId, userId) as DbMeetingRow[];
 
   return {
-    hosting: hosting.map((r) => mapDbMeeting(r, userId, true)),
-    attending: attending.map((r) => mapDbMeeting(r, userId, true)),
+    hosting: attachTagsToMeetings(hosting.map((r) => mapDbMeeting(r, userId, true))),
+    attending: attachTagsToMeetings(attending.map((r) => mapDbMeeting(r, userId, true))),
   };
 }

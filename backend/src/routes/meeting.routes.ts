@@ -72,10 +72,10 @@ meetingRouter.get(
   optionalAuth,
   validate({ query: meetingQuerySchema }),
   (req: Request, res: Response) => {
-    const { page, limit, search, status } = req.query as any;
+    const { page, limit, search, status, tagId } = req.query as any;
     const userId = req.user?.id;
 
-    const result = getMeetings({ page, limit, search, status }, userId);
+    const result = getMeetings({ page, limit, search, status, tagId }, userId);
 
     res.json({
       meetings: result.data,
