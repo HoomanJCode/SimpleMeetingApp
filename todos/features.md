@@ -86,7 +86,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 4. Event Timeline View
+## 4. Event Timeline View ✅ Done (bd294d2)
 
 **Request:** A scrolling horizontal/vertical timeline that shows events along a chronological line. Users scroll through time and see meeting cards pop up along the line at their corresponding dates.
 
@@ -114,7 +114,7 @@ Requested features to implement. Keep adding as you think of them.
 
 ---
 
-## 5. Tags / Labels for Events
+## 5. Tags / Labels for Events ✅ Done (6e4d397, c891226)
 
 **Request:** Allow organizers to add tags/labels to meetings (e.g. "workshop", "social", "urgent", "remote") so users can categorize, filter, and quickly identify event types.
 
