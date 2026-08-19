@@ -30,6 +30,9 @@ export function Header() {
                 <Link to="/calendar" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                   Calendar
                 </Link>
+                <Link to="/timeline" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                  Timeline
+                </Link>
                 <Link
                   to="/meetings/new"
                   className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
@@ -107,6 +110,7 @@ export function Header() {
                 </div>
                 <Link to="/my-meetings" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>My Meetings</Link>
                 <Link to="/calendar" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>Calendar</Link>
+                <Link to="/timeline" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>Timeline</Link>
                 <Link to="/meetings/new" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => setMenuOpen(false)}>Create Meeting</Link>
                 <button onClick={logout} className="text-left text-red-500 hover:text-red-600 pt-2 border-t border-gray-100 dark:border-gray-800">Sign Out</button>
               </div>
